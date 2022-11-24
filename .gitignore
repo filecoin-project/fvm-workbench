@@ -1,0 +1,6 @@
+target
+*.wat
+*.wasm
+
+# IDE project files
+.idea/
