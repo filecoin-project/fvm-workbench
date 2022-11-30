@@ -26,7 +26,7 @@ use fvm_workbench_vm::BenchBuilder;
 fn test_hookup() {
     let blockstore = MemoryBlockstore::new();
     let externs = FakeExterns::new();
-    let mut builder = BenchBuilder::new_with_bundle(
+    let  (mut builder, manifest_data_cid) = BenchBuilder::new_with_bundle(
         blockstore,
         externs,
         NetworkVersion::V16,
@@ -36,13 +36,13 @@ fn test_hookup() {
     .unwrap();
 
     let spec = GenesisSpec {
+        system_manifest_cid: manifest_data_cid,
         reward_balance: TokenAmount::from_whole(1_100_000_000),
         faucet_balance: TokenAmount::from_whole(900_000_000),
         verifreg_signer: Address::new_bls(&[200; fvm_shared::address::BLS_PUB_LEN]).unwrap(),
     };
 
-    builder.create_system_actors().unwrap();
-    let genesis = create_singletons(&mut builder, &spec).unwrap();
+    let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
 
     let mut bench = builder.build().unwrap();
 
@@ -66,12 +66,30 @@ fn test_hookup() {
     println!("trace: {:?}", format_trace(&ret.exec_trace));
 }
 
-fn create_singletons<B, E>(builder: &mut BenchBuilder<B, E>, spec: &GenesisSpec) -> anyhow::Result<GenesisResult>
+fn create_genesis_actors<B, E>(builder: &mut BenchBuilder<B, E>, spec: &GenesisSpec) -> anyhow::Result<GenesisResult>
 where
     B: Blockstore + Clone,
     E: Externs + Clone,
 
 {
+    // System actor
+    let system_state = fil_actor_system::State{ builtin_actors: spec.system_manifest_cid };
+    builder.create_singleton_actor(
+        Type::System as u32,
+        &fil_actors_runtime::SYSTEM_ACTOR_ADDR,
+        &system_state,
+        TokenAmount::zero(),
+    )?;
+
+    // Init actor
+    let init_state = fil_actor_init::State::new(builder.store(), "workbench".to_string())?;
+    builder.create_singleton_actor(
+        Type::Init as u32,
+        &fil_actors_runtime::INIT_ACTOR_ADDR,
+        &init_state,
+        TokenAmount::zero(),
+    )?;
+
     // Reward actor
     let reward_state = fil_actor_reward::State::new(StoragePower::zero());
     builder.create_singleton_actor(

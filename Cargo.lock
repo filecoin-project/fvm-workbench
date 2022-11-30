@@ -1807,6 +1807,7 @@ name = "fvm-workbench-builtin-actors"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cid",
  "fil_actor_account",
  "fil_actor_cron",
  "fil_actor_datacap",

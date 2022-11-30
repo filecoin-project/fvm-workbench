@@ -1,25 +1,25 @@
-use fvm_ipld_blockstore::Blockstore;
-use fvm::state_tree::{ActorState, StateTree};
-use fvm_shared::address::Address;
-use cid::Cid;
-use fvm_shared::econ::TokenAmount;
-use multihash::Code;
-use fvm_ipld_car::load_car_unchecked;
-use fvm::externs::Externs;
-use fvm_shared::version::NetworkVersion;
-use fvm_shared::state::StateTreeVersion;
-use fvm::machine::{DefaultMachine, Engine, MachineContext, Manifest, NetworkConfig};
-use fvm_shared::ActorID;
-use fvm::{account_actor, DefaultKernel, init_actor, system_actor};
-use fvm_ipld_hamt::Hamt;
-use fvm::executor::DefaultExecutor;
-use fvm::call_manager::DefaultCallManager;
-use fvm_ipld_encoding::CborStore;
-use anyhow::{anyhow, Context};
-use futures::executor::block_on;
-use fvm_ipld_encoding::ser::Serialize;
-use fvm_shared::bigint::Zero;
 use crate::Bench;
+use anyhow::{anyhow, Context};
+use cid::Cid;
+use futures::executor::block_on;
+use fvm::call_manager::DefaultCallManager;
+use fvm::executor::DefaultExecutor;
+use fvm::externs::Externs;
+use fvm::machine::{DefaultMachine, Engine, MachineContext, Manifest, NetworkConfig};
+use fvm::state_tree::{ActorState, StateTree};
+use fvm::{account_actor, init_actor, system_actor, DefaultKernel};
+use fvm_ipld_blockstore::Blockstore;
+use fvm_ipld_car::load_car_unchecked;
+use fvm_ipld_encoding::ser::Serialize;
+use fvm_ipld_encoding::CborStore;
+use fvm_ipld_hamt::Hamt;
+use fvm_shared::address::Address;
+use fvm_shared::bigint::Zero;
+use fvm_shared::econ::TokenAmount;
+use fvm_shared::state::StateTreeVersion;
+use fvm_shared::version::NetworkVersion;
+use fvm_shared::ActorID;
+use multihash::Code;
 
 // A workbench backed by a real FVM instance.
 // TODO:
@@ -57,16 +57,17 @@ where
     E: Externs + Clone,
 {
     /// Create a new BenchBuilder and loads built-in actor code from a bundle.
+    /// Returns the builder and manifest data CID.
     pub fn new_with_bundle(
         blockstore: B,
         externs: E,
         nv: NetworkVersion,
         state_tree_version: StateTreeVersion,
         builtin_bundle: &[u8],
-    ) -> anyhow::Result<Self> {
+    ) -> anyhow::Result<(Self, Cid)> {
         let mut bb = BenchBuilder::new_bare(blockstore, externs, nv, state_tree_version)?;
-        bb.install_builtin_actor_bundle(builtin_bundle)?;
-        Ok(bb)
+        let manifest_data_cid = bb.install_builtin_actor_bundle(builtin_bundle)?;
+        Ok((bb, manifest_data_cid))
     }
 
     /// Creates a new BenchBuilder with no installed code for built-in actors.
@@ -106,7 +107,8 @@ where
     /// Imports built-in actor code and manifest into the state tree from a bundle in CAR format.
     /// After this, built-in actors can be created from the code thus installed.
     /// Does not create any actors.
-    pub fn install_builtin_actor_bundle(&mut self, bundle_data: &[u8]) -> anyhow::Result<()> {
+    /// Returns the manifest data CID.
+    pub fn install_builtin_actor_bundle(&mut self, bundle_data: &[u8]) -> anyhow::Result<Cid> {
         if self.builtin_manifest.is_some() {
             return Err(anyhow!("built-in actors already installed"));
         }
@@ -121,7 +123,7 @@ where
         };
         self.builtin_manifest_data_cid = Some(manifest_data_cid);
         self.builtin_manifest = Some(Manifest::load(store, &manifest_data_cid, manifest_version)?);
-        Ok(())
+        Ok(manifest_data_cid)
     }
 
     /// Installs built-in actors code from a manifest provided directly.
@@ -130,14 +132,6 @@ where
         // Set local manifest data cid
         // Caller will also need to install the actor code for each actor in the manifest
         todo!()
-    }
-
-    /// Creates the System and Init actors using code specified in the manifest.
-    /// These actors must be installed before the executor can be built or used.
-    pub fn create_system_actors(&mut self) -> anyhow::Result<()> {
-        self.create_system_actor()?;
-        self.create_init_actor()?;
-        Ok(())
     }
 
     /// Creates a singleton built-in actor using code specified in the manifest.
@@ -161,76 +155,13 @@ where
         state: &impl Serialize,
         balance: TokenAmount,
     ) -> anyhow::Result<ActorID> {
-        // It would be nice to be able to use the VM to execute the actor's constructor,
-        // but the VM isn't ready yet.
-        // Establish the address mapping in Init actor.
-        let mut init_actor = self
-            .state_tree
-            .get_actor_id(init_actor::INIT_ACTOR_ADDR.id().unwrap() as ActorID)?
-            .unwrap();
-        let mut init_state: init_actor::State =
-            self.store().get_cbor(&init_actor.state).unwrap().unwrap();
-        let new_id = init_state.map_address_to_new_id(self.store(), &address)?;
-        let state_cid = self
-            .state_tree
-            .store()
-            .put_cbor(&init_state, Code::Blake2b256)
-            .context("failed to put actor state while updating")
-            .unwrap();
-        init_actor.state = state_cid;
-        self.state_tree.set_actor(&init_actor::INIT_ACTOR_ADDR, init_actor).unwrap();
-
-        // Create the actor.
-        self.create_builtin_actor_internal(
-            type_id,
-            &Address::new_id(new_id),
-            &state,
-            balance,
-        )?;
+        let new_id = self.state_tree.register_new_address(address)?;
+        self.create_builtin_actor_internal(type_id, &Address::new_id(new_id), &state, balance)?;
         Ok(new_id)
     }
 
-    /// Creates the system actor, using code specified in the manifest.
-    pub fn create_system_actor(&mut self) -> anyhow::Result<()> {
-        if self.builtin_manifest_data_cid.is_none() {
-            return Err(anyhow!("built-in actor bundle not loaded"));
-        }
-        // Note: the FVM Tester incorrectly sets the bundle root CID in system actor state here,
-        // but it should be the manifest data CID.
-        // The error is masked by also providing a builtin-actors override.
-        let state = system_actor::State { builtin_actors: self.builtin_manifest_data_cid.unwrap() };
-        self.create_builtin_actor_internal(
-            SYSTEM_ACTOR_TYPE_ID,
-            &system_actor::SYSTEM_ACTOR_ADDR,
-            &state,
-            TokenAmount::zero(),
-        )
-    }
-
-    /// Creates the init actor, using code specified in the manifest.
-    pub fn create_init_actor(&mut self) -> anyhow::Result<()> {
-        let e_cid =
-            Hamt::<_, String>::new_with_bit_width(self.state_tree.store(), 5).flush().unwrap();
-        let state = init_actor::State {
-            address_map: e_cid,
-            next_id: 100,
-            network_name: "bench".to_string(),
-        };
-        self.create_builtin_actor_internal(
-            INIT_ACTOR_TYPE_ID,
-            &init_actor::INIT_ACTOR_ADDR,
-            &state,
-            TokenAmount::zero(),
-        )
-    }
-
-    // The system actor must be installed before the workbench can be built.
-    // It's not necessary to install any other actors, though the Init actor must also be
-    // installed in order to subsequently send any message.
+    /// The System and Init actors must be created before the executor can be built or used.
     pub fn build(&mut self) -> anyhow::Result<Bench<B, E>> {
-        self.create_system_actor()?;
-        self.create_init_actor()?;
-
         // Clone the context so the builder can be re-used for a new bench.
         let mut machine_ctx = self.machine_ctx.clone();
 
