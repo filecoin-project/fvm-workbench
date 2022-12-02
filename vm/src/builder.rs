@@ -7,19 +7,19 @@ use fvm::executor::DefaultExecutor;
 use fvm::externs::Externs;
 use fvm::machine::{DefaultMachine, Engine, MachineContext, Manifest, NetworkConfig};
 use fvm::state_tree::{ActorState, StateTree};
-use fvm::{account_actor, init_actor, system_actor, DefaultKernel};
+use fvm::{ DefaultKernel};
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_car::load_car_unchecked;
 use fvm_ipld_encoding::ser::Serialize;
 use fvm_ipld_encoding::CborStore;
-use fvm_ipld_hamt::Hamt;
 use fvm_shared::address::Address;
-use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::ActorID;
 use multihash::Code;
+use fvm_workbench_api::WorkbenchBuilder;
+use crate::bench::FvmBench;
 
 // A workbench backed by a real FVM instance.
 // TODO:
@@ -43,13 +43,6 @@ where
     builtin_manifest_data_cid: Option<Cid>,
     builtin_manifest: Option<Manifest>,
 }
-
-// These built-in actor types are defined in the built-in actors repo (which is not imported here)
-// and are used as the sequence of actors codes in the manifest.
-// We could replace these with name strings if the FVM Manifest provided access to them.
-const SYSTEM_ACTOR_TYPE_ID: u32 = 1;
-const INIT_ACTOR_TYPE_ID: u32 = 2;
-const ACCOUNT_ACTOR_TYPE_ID: u32 = 4;
 
 impl<B, E> BenchBuilder<B, E>
 where
@@ -100,10 +93,6 @@ where
         })
     }
 
-    pub fn store(&self) -> &B {
-        self.state_tree.store()
-    }
-
     /// Imports built-in actor code and manifest into the state tree from a bundle in CAR format.
     /// After this, built-in actors can be created from the code thus installed.
     /// Does not create any actors.
@@ -134,34 +123,9 @@ where
         todo!()
     }
 
-    /// Creates a singleton built-in actor using code specified in the manifest.
-    /// A singleton actor does not have a robust/key address resolved via the Init actor.
-    pub fn create_singleton_actor(
-        &mut self,
-        type_id: u32,
-        address: &Address,
-        state: &impl Serialize,
-        balance: TokenAmount,
-    ) -> anyhow::Result<()> {
-        self.create_builtin_actor_internal(type_id, address, state, balance)
-    }
-
-    /// Creates a non-singleton built-in actor using code specified in the manifest.
-    /// Returns the assigned ActorID.
-    pub fn create_builtin_actor(
-        &mut self,
-        type_id: u32,
-        address: &Address,
-        state: &impl Serialize,
-        balance: TokenAmount,
-    ) -> anyhow::Result<ActorID> {
-        let new_id = self.state_tree.register_new_address(address)?;
-        self.create_builtin_actor_internal(type_id, &Address::new_id(new_id), &state, balance)?;
-        Ok(new_id)
-    }
-
-    /// The System and Init actors must be created before the executor can be built or used.
-    pub fn build(&mut self) -> anyhow::Result<Bench<B, E>> {
+    /// Creates a workbench with the current state tree.
+    /// The System and Init actors must be created before the workbench can be built or used.
+    pub fn build(&mut self) -> anyhow::Result<FvmBench<B, E>> {
         // Clone the context so the builder can be re-used for a new bench.
         let mut machine_ctx = self.machine_ctx.clone();
 
@@ -180,7 +144,7 @@ where
             DefaultExecutor::<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>::new(
                 machine,
             );
-        Ok(Bench::new(executor))
+        Ok(FvmBench::new(executor))
     }
 
     ///// Private helpers /////
@@ -188,17 +152,66 @@ where
     fn create_builtin_actor_internal(
         &mut self,
         type_id: u32,
-        addr: &Address,
+        id: ActorID,
         state: &impl Serialize,
         balance: TokenAmount,
     ) -> anyhow::Result<()> {
         if let Some(manifest) = self.builtin_manifest.as_ref() {
             let code_cid = manifest.code_by_id(type_id).unwrap();
-            create_actor(&mut self.state_tree, addr, *code_cid, state, balance)
+            let code = *code_cid;
+            let state_cid = self.state_tree
+                .store()
+                .put_cbor(state, Code::Blake2b256)
+                .context("failed to put actor state while installing")?;
+
+            let actor_state = ActorState { code, state: state_cid, sequence: 0, balance };
+            self.state_tree
+                .set_actor(&Address::new_id(id), actor_state)
+                .map_err(anyhow::Error::from)
+                .context("failed to install actor")
         } else {
             Err(anyhow!("built-in actor manifest not loaded"))
         }
     }
+}
+
+impl<B, E> WorkbenchBuilder<B> for BenchBuilder<B, E>
+    where
+        B: Blockstore + Clone,
+        E: Externs + Clone,
+{
+     fn store(&self) -> &B {
+        self.state_tree.store()
+    }
+
+
+    /// Creates a singleton built-in actor using code specified in the manifest.
+    /// A singleton actor does not have a robust/key address resolved via the Init actor.
+    fn create_singleton_actor(
+        &mut self,
+        type_id: u32,
+        id: ActorID,
+        state: &impl Serialize,
+        balance: TokenAmount,
+    ) -> anyhow::Result<()> {
+        self.create_builtin_actor_internal(type_id, id, state, balance)
+    }
+
+    /// Creates a non-singleton built-in actor using code specified in the manifest.
+    /// Returns the assigned ActorID.
+     fn create_builtin_actor(
+        &mut self,
+        type_id: u32,
+        address: &Address,
+        state: &impl Serialize,
+        balance: TokenAmount,
+    ) -> anyhow::Result<ActorID> {
+        let new_id = self.state_tree.register_new_address(address)?;
+        self.create_builtin_actor_internal(type_id, new_id, &state, balance)?;
+        Ok(new_id)
+    }
+
+
 }
 
 fn import_bundle(blockstore: &impl Blockstore, bundle: &[u8]) -> anyhow::Result<Cid> {
@@ -206,23 +219,4 @@ fn import_bundle(blockstore: &impl Blockstore, bundle: &[u8]) -> anyhow::Result<
         [root] => Ok(*root),
         _ => Err(anyhow!("multiple root CIDs in bundle")),
     }
-}
-
-fn create_actor<B: Blockstore>(
-    state_tree: &mut StateTree<B>,
-    id_addr: &Address,
-    code: Cid,
-    state: &impl Serialize,
-    balance: TokenAmount,
-) -> anyhow::Result<()> {
-    let state_cid = state_tree
-        .store()
-        .put_cbor(state, Code::Blake2b256)
-        .context("failed to put actor state while installing")?;
-
-    let actor_state = ActorState { code, state: state_cid, sequence: 0, balance };
-    state_tree
-        .set_actor(id_addr, actor_state)
-        .map_err(anyhow::Error::from)
-        .context("failed to install actor")
 }

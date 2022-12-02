@@ -1793,10 +1793,11 @@ version = "0.1.0"
 name = "fvm-workbench-api"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "fvm_ipld_amt 0.5.0",
  "fvm_ipld_blockstore",
  "fvm_ipld_car",
- "fvm_ipld_encoding 0.3.0",
+ "fvm_ipld_encoding 0.2.2",
  "fvm_ipld_hamt 0.6.1",
  "fvm_shared",
  "thiserror",
@@ -1823,6 +1824,7 @@ dependencies = [
  "fil_actors_runtime",
  "fil_builtin_actors_bundle",
  "fvm",
+ "fvm-workbench-api",
  "fvm-workbench-vm",
  "fvm_ipld_amt 0.5.0",
  "fvm_ipld_blockstore",
@@ -1845,7 +1847,7 @@ dependencies = [
  "fvm_ipld_amt 0.5.0",
  "fvm_ipld_blockstore",
  "fvm_ipld_car",
- "fvm_ipld_encoding 0.3.0",
+ "fvm_ipld_encoding 0.2.2",
  "fvm_ipld_hamt 0.6.1",
  "fvm_shared",
  "multihash",

@@ -9,14 +9,14 @@ edition = "2021"
 [dependencies]
 fvm-workbench-api = { path = "../api" }
 
-# fvm feature=testing required for access to some modules that are otherwise private.
+# fvm feature=testing required to not be amazingly slow
 fvm = { version = "2.0.0",  default-features = false, features = ["testing"] }
 fvm_shared = { version = "2.0.0" }
 fvm_ipld_hamt = { version = "0.6.1" }
 fvm_ipld_amt = { version = "0.5.0" }
 fvm_ipld_car = { version = "0.6.0" }
 fvm_ipld_blockstore = { version = "0.1.1" }
-fvm_ipld_encoding = { version = "0.3.0" }
+fvm_ipld_encoding = { version = "0.2.2" }
 
 anyhow = "1.0.47"
 cid = { version = "0.8.5", default-features = false }

@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 fvm-workbench-vm = { path = "../vm" }
+fvm-workbench-api = { path = "../api" }
 
 actors-v10 = { package = "fil_builtin_actors_bundle", version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "2434867" }
 fil_actor_account = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "2434867", features = [] }
