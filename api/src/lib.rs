@@ -4,9 +4,11 @@ use fvm_shared::ActorID;
 use fvm_shared::address::Address;
 use fvm_shared::econ::TokenAmount;
 
-pub trait WorkbenchBuilder<B: Blockstore>
+pub trait WorkbenchBuilder
 {
-    fn store(&self) -> &B;
+    type B: Blockstore;
+
+    fn store(&self) -> &Self::B;
 
     /// Creates a singleton built-in actor using code specified in the manifest.
     /// A singleton actor does not have a robust/key address resolved via the Init actor.

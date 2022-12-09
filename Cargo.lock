@@ -1823,6 +1823,7 @@ dependencies = [
  "fil_actor_verifreg",
  "fil_actors_runtime",
  "fil_builtin_actors_bundle",
+ "frc46_token",
  "fvm",
  "fvm-workbench-api",
  "fvm-workbench-vm",
@@ -1832,6 +1833,7 @@ dependencies = [
  "fvm_ipld_encoding 0.2.2",
  "fvm_ipld_hamt 0.6.1",
  "fvm_shared",
+ "rand_chacha",
  "thiserror",
 ]
 

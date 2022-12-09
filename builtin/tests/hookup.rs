@@ -1,9 +1,3 @@
-// use fil_actors_runtime::{
-//      BURNT_FUNDS_ACTOR_ADDR, BURNT_FUNDS_ACTOR_ID, CRON_ACTOR_ID,
-//     DATACAP_TOKEN_ACTOR_ID, INIT_ACTOR_ADDR, INIT_ACTOR_ID, REWARD_ACTOR_ID,
-//     STORAGE_MARKET_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ID, STORAGE_POWER_ACTOR_ADDR,
-//     STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID, VERIFIED_REGISTRY_ACTOR_ID,
-// };
 use fil_actors_runtime::INIT_ACTOR_ADDR;
 use fvm::trace::ExecutionTrace;
 use fvm_ipld_blockstore::MemoryBlockstore;
@@ -21,11 +15,9 @@ use fvm_workbench_vm::{BenchBuilder, ExecutionWrangler, FakeExterns};
 
 #[test]
 fn test_hookup() {
-    let blockstore = MemoryBlockstore::new();
-    let externs = FakeExterns::new();
     let (mut builder, manifest_data_cid) = BenchBuilder::new_with_bundle(
-        blockstore,
-        externs,
+        MemoryBlockstore::new(),
+        FakeExterns::new(),
         NetworkVersion::V16,
         StateTreeVersion::V4,
         actors_v10::BUNDLE_CAR,

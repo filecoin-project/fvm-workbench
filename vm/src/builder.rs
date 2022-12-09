@@ -5,7 +5,7 @@ use futures::executor::block_on;
 use fvm::call_manager::DefaultCallManager;
 use fvm::executor::DefaultExecutor;
 use fvm::externs::Externs;
-use fvm::machine::{DefaultMachine, Engine, MachineContext, Manifest, NetworkConfig};
+use fvm::machine::{DefaultMachine, Engine, Machine, MachineContext, Manifest, NetworkConfig};
 use fvm::state_tree::{ActorState, StateTree};
 use fvm::{ DefaultKernel};
 use fvm_ipld_blockstore::Blockstore;
@@ -19,7 +19,7 @@ use fvm_shared::version::NetworkVersion;
 use fvm_shared::ActorID;
 use multihash::Code;
 use fvm_workbench_api::WorkbenchBuilder;
-use crate::bench::FvmBench;
+use crate::bench::{BenchExecutor, FvmBench};
 
 // A workbench backed by a real FVM instance.
 // TODO:
@@ -46,6 +46,7 @@ where
 
 impl<B, E> BenchBuilder<B, E>
 where
+    // TODO: try B, E as a method parameter rather than type parameter
     B: Blockstore + Clone,
     E: Externs + Clone,
 {
@@ -144,6 +145,13 @@ where
             DefaultExecutor::<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>::new(
                 machine,
             );
+        // Preload built-in actor code.
+        // This is crazy slow but necessary because it won't otherwise be loaded on demand,
+        // contrary to comments inside the FVM.
+        // Possibly we could expose some API to let the user select which actors to load.
+        // An alternative way is to build FVM with config=testing, but that will always load all of them.
+        // Note that if config=m2-native is set, all user actors will be built at this point.
+        executor.engine().preload(executor.blockstore(), self.builtin_manifest.as_ref().unwrap().builtin_actor_codes())?;
         Ok(FvmBench::new(executor))
     }
 
@@ -175,11 +183,13 @@ where
     }
 }
 
-impl<B, E> WorkbenchBuilder<B> for BenchBuilder<B, E>
+impl<B, E> WorkbenchBuilder for BenchBuilder<B, E>
     where
         B: Blockstore + Clone,
         E: Externs + Clone,
 {
+    type B = B;
+
      fn store(&self) -> &B {
         self.state_tree.store()
     }

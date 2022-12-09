@@ -53,13 +53,10 @@ impl GenesisResult {
 }
 
 
-pub fn create_genesis_actors<WB, B>(
-    builder: &mut WB,
+pub fn create_genesis_actors<B: WorkbenchBuilder>(
+    builder: &mut B,
     spec: &GenesisSpec,
 ) -> anyhow::Result<GenesisResult>
-    where
-        WB: WorkbenchBuilder<B>,
-        B: Blockstore + Clone,
 {
     // System actor
     let system_state = fil_actor_system::State { builtin_actors: spec.system_manifest_cid };
