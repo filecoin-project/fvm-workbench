@@ -1,25 +1,26 @@
-use crate::Bench;
 use anyhow::{anyhow, Context};
 use cid::Cid;
 use futures::executor::block_on;
 use fvm::call_manager::DefaultCallManager;
+use fvm::DefaultKernel;
 use fvm::executor::DefaultExecutor;
 use fvm::externs::Externs;
 use fvm::machine::{DefaultMachine, Engine, Machine, MachineContext, Manifest, NetworkConfig};
 use fvm::state_tree::{ActorState, StateTree};
-use fvm::{ DefaultKernel};
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_car::load_car_unchecked;
-use fvm_ipld_encoding::ser::Serialize;
 use fvm_ipld_encoding::CborStore;
+use fvm_ipld_encoding::ser::Serialize;
+use fvm_shared::ActorID;
 use fvm_shared::address::Address;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
-use fvm_shared::ActorID;
 use multihash::Code;
+
 use fvm_workbench_api::WorkbenchBuilder;
-use crate::bench::{BenchExecutor, FvmBench};
+
+use crate::bench::FvmBench;
 
 // A workbench backed by a real FVM instance.
 // TODO:
@@ -151,7 +152,10 @@ where
         // Possibly we could expose some API to let the user select which actors to load.
         // An alternative way is to build FVM with config=testing, but that will always load all of them.
         // Note that if config=m2-native is set, all user actors will be built at this point.
-        executor.engine().preload(executor.blockstore(), self.builtin_manifest.as_ref().unwrap().builtin_actor_codes())?;
+        executor.engine().preload(
+            executor.blockstore(),
+            self.builtin_manifest.as_ref().unwrap().builtin_actor_codes(),
+        )?;
         Ok(FvmBench::new(executor))
     }
 
@@ -167,7 +171,8 @@ where
         if let Some(manifest) = self.builtin_manifest.as_ref() {
             let code_cid = manifest.code_by_id(type_id).unwrap();
             let code = *code_cid;
-            let state_cid = self.state_tree
+            let state_cid = self
+                .state_tree
                 .store()
                 .put_cbor(state, Code::Blake2b256)
                 .context("failed to put actor state while installing")?;
@@ -184,16 +189,15 @@ where
 }
 
 impl<B, E> WorkbenchBuilder for BenchBuilder<B, E>
-    where
-        B: Blockstore + Clone,
-        E: Externs + Clone,
+where
+    B: Blockstore + Clone,
+    E: Externs + Clone,
 {
     type B = B;
 
-     fn store(&self) -> &B {
+    fn store(&self) -> &B {
         self.state_tree.store()
     }
-
 
     /// Creates a singleton built-in actor using code specified in the manifest.
     /// A singleton actor does not have a robust/key address resolved via the Init actor.
@@ -209,7 +213,7 @@ impl<B, E> WorkbenchBuilder for BenchBuilder<B, E>
 
     /// Creates a non-singleton built-in actor using code specified in the manifest.
     /// Returns the assigned ActorID.
-     fn create_builtin_actor(
+    fn create_builtin_actor(
         &mut self,
         type_id: u32,
         address: &Address,
@@ -220,8 +224,6 @@ impl<B, E> WorkbenchBuilder for BenchBuilder<B, E>
         self.create_builtin_actor_internal(type_id, new_id, &state, balance)?;
         Ok(new_id)
     }
-
-
 }
 
 fn import_bundle(blockstore: &impl Blockstore, bundle: &[u8]) -> anyhow::Result<Cid> {

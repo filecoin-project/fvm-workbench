@@ -1,20 +1,22 @@
-use fvm::call_manager::{CallManager, DefaultCallManager};
+use std::collections::HashMap;
+
+use anyhow::anyhow;
+use cid::Cid;
+use fvm::call_manager::DefaultCallManager;
+use fvm::DefaultKernel;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
 use fvm::externs::Externs;
 use fvm::machine::{DefaultMachine, Machine};
 use fvm::trace::ExecutionTrace;
-use fvm::{DefaultKernel, Kernel};
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::{de, from_slice, RawBytes};
+use fvm_shared::{ActorID, BLOCK_GAS_LIMIT, MethodNum};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
+use fvm_shared::clock::ChainEpoch;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::receipt::Receipt;
-use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
-use std::collections::HashMap;
-use anyhow::anyhow;
-use cid::Cid;
 
 // TODO: move to api crate when ExecutionTrace is not FVM-internal
 pub trait Bench {
@@ -26,6 +28,7 @@ pub trait Bench {
         msg: Message,
         msg_length: usize,
     ) -> anyhow::Result<ExecutionResult>;
+    fn epoch(&self) -> ChainEpoch;
     fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>>;
     /// Loads and deserializes an object from the blockstore.
     // fn load_state<T: de::DeserializeOwned>(&self, cid: &Cid)-> anyhow::Result<Option<T>>;
@@ -65,7 +68,7 @@ pub struct ActorState {
 }
 
 pub type BenchExecutor<B, E> =
-DefaultExecutor<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>;
+    DefaultExecutor<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>;
 
 pub struct FvmBench<B, E>
 where
@@ -104,15 +107,16 @@ where
         self.executor.execute_message(msg, ApplyKind::Implicit, msg_length).map(ret_as_result)
     }
 
+    fn epoch(&self) -> ChainEpoch {
+        self.executor.context().epoch
+    }
+
     fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
-        let raw = self.executor.state_tree().get_actor_id(id)
-            .map_err(|e| {
-                anyhow!(
-                "failed to load actor {}: {}",
-                id,
-                e.to_string()
-            )
-            })?;
+        let raw = self
+            .executor
+            .state_tree()
+            .get_actor_id(id)
+            .map_err(|e| anyhow!("failed to load actor {}: {}", id, e.to_string()))?;
         Ok(raw.map(|a| ActorState {
             code: a.code,
             state: a.state,
@@ -126,13 +130,10 @@ where
     }
 
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
-        self.executor.state_tree().lookup_id(addr).map_err(|e| {
-            anyhow!(
-                "failed to resolve address {}: {}",
-                addr,
-                e.to_string()
-            )
-        })
+        self.executor
+            .state_tree()
+            .lookup_id(addr)
+            .map_err(|e| anyhow!("failed to resolve address {}: {}", addr, e.to_string()))
     }
 }
 
@@ -145,7 +146,7 @@ fn ret_as_result(ret: ApplyRet) -> ExecutionResult {
         base_fee_burn: ret.base_fee_burn,
         over_estimation_burn: ret.over_estimation_burn,
         trace: ret.exec_trace,
-        message: ret.failure_info.map_or("".to_string(), |f|f.to_string()),
+        message: ret.failure_info.map_or("".to_string(), |f| f.to_string()),
     }
 }
 
@@ -219,11 +220,18 @@ impl<'a> ExecutionWrangler<'a> {
         ret
     }
 
+    pub fn epoch(&self) -> ChainEpoch {
+        self.bench.epoch()
+    }
+
     pub fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
         self.bench.find_actor(id)
     }
 
-    pub fn find_actor_state<T: de::DeserializeOwned>(&self, id: ActorID) -> anyhow::Result<Option<T>> {
+    pub fn find_actor_state<T: de::DeserializeOwned>(
+        &self,
+        id: ActorID,
+    ) -> anyhow::Result<Option<T>> {
         let actor = self.bench.find_actor(id)?;
         Ok(match actor {
             Some(actor) => {
@@ -233,11 +241,14 @@ impl<'a> ExecutionWrangler<'a> {
                     .get(&actor.state)
                     .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
 
-                block.map(|s| {
-                    from_slice(&s).map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
-                }).transpose()?
+                block
+                    .map(|s| {
+                        from_slice(&s)
+                            .map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
+                    })
+                    .transpose()?
             }
-            None => {None}
+            None => None,
         })
     }
 
@@ -274,5 +285,11 @@ impl<'a> ExecutionWrangler<'a> {
             0 // FIXME serialize and size
         };
         (msg, msg_length)
+    }
+}
+
+pub fn format_trace(trace: &ExecutionTrace) {
+    for event in trace {
+        println!("{:?}", event);
     }
 }
