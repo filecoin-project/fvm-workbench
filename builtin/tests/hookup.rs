@@ -11,9 +11,10 @@ use fvm_shared::version::NetworkVersion;
 use fvm_workbench_api::trace::format_trace;
 
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
-use fvm_workbench_vm::bench::ExecutionWrangler;
+use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
+use fvm_workbench_api::WorkbenchBuilder;
 
 #[test]
 fn test_hookup() {
@@ -30,7 +31,7 @@ fn test_hookup() {
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let mut bench = builder.build().unwrap();
 
-    let mut wrangler = ExecutionWrangler::new_default(&mut bench);
+    let mut wrangler = ExecutionWrangler::new_default(&mut *bench);
     let ret = wrangler
         .execute(
             genesis.faucet_address(),

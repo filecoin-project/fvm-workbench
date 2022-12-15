@@ -31,13 +31,14 @@ use rand_chacha::ChaCha8Rng;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
-use fvm_workbench_vm::bench::ExecutionWrangler;
+use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 use multihash::derive::Multihash;
 use multihash::MultihashDigest;
 use fvm_workbench_api::ExecutionResult;
 use fvm_workbench_api::trace::format_trace;
+use fvm_workbench_api::WorkbenchBuilder;
 
 /* Mint a token for client and transfer it to a receiver, exercising error cases */
 #[test]
@@ -56,7 +57,7 @@ fn datacap_transfer_scenario() {
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
 
     let mut bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(&mut bench);
+    let mut w = ExecutionWrangler::new_default(&mut *bench);
 
     let accts =
         create_accounts(&mut w, genesis.faucet_id, 3, TokenAmount::from_whole(10_000)).unwrap();
