@@ -8,15 +8,16 @@ use fvm_shared::error::ExitCode;
 use fvm_shared::METHOD_SEND;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
+use fvm_workbench_api::trace::format_trace;
 
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
-use fvm_workbench_vm::bench::{ExecutionWrangler, format_trace};
-use fvm_workbench_vm::builder::BenchBuilder;
+use fvm_workbench_vm::bench::ExecutionWrangler;
+use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 
 #[test]
 fn test_hookup() {
-    let (mut builder, manifest_data_cid) = BenchBuilder::new_with_bundle(
+    let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         MemoryBlockstore::new(),
         FakeExterns::new(),
         NetworkVersion::V16,

@@ -31,18 +31,20 @@ use rand_chacha::ChaCha8Rng;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
-use fvm_workbench_vm::bench::{ExecutionResult, ExecutionWrangler, format_trace};
-use fvm_workbench_vm::builder::BenchBuilder;
+use fvm_workbench_vm::bench::ExecutionWrangler;
+use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 use multihash::derive::Multihash;
 use multihash::MultihashDigest;
+use fvm_workbench_api::ExecutionResult;
+use fvm_workbench_api::trace::format_trace;
 
 /* Mint a token for client and transfer it to a receiver, exercising error cases */
 #[test]
 fn datacap_transfer_scenario() {
     let policy = Policy::default();
 
-    let (mut builder, manifest_data_cid) = BenchBuilder::new_with_bundle(
+    let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         MemoryBlockstore::new(),
         FakeExterns::new(),
         NetworkVersion::V16,
@@ -123,7 +125,7 @@ fn datacap_transfer_scenario() {
     )
     .unwrap();
     assert_eq!(ExitCode::OK, result.receipt.exit_code);
-    println!("trace: {:?}", format_trace(&result.trace));
+    println!("trace: {}", format_trace(&result.trace));
 }
 
 pub fn apply_ok<T: ser::Serialize + ?Sized>(

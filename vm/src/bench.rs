@@ -1,75 +1,25 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use cid::Cid;
 use fvm::call_manager::DefaultCallManager;
-use fvm::DefaultKernel;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
 use fvm::externs::Externs;
 use fvm::machine::{DefaultMachine, Machine};
-use fvm::trace::ExecutionTrace;
+use fvm::trace::ExecutionEvent;
+use fvm::DefaultKernel;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::{de, from_slice, RawBytes};
-use fvm_shared::{ActorID, BLOCK_GAS_LIMIT, MethodNum};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
-use fvm_shared::receipt::Receipt;
+use fvm_shared::{ActorID, BLOCK_GAS_LIMIT, MethodNum};
+use fvm_workbench_api::trace::ExecutionEvent::{Call, CallAbort, CallError, CallReturn, GasCharge};
+use fvm_workbench_api::trace::ExecutionTrace;
+use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
 
-// TODO: move to api crate when ExecutionTrace is not FVM-internal
-pub trait Bench {
-    // Explicit messages increment the sender's nonce and charge for gas consumed.
-    // Implicit messages ignore the nonce and charge no gas (but still account for it).
-    fn execute(&mut self, msg: Message, msg_length: usize) -> anyhow::Result<ExecutionResult>;
-    fn execute_implicit(
-        &mut self,
-        msg: Message,
-        msg_length: usize,
-    ) -> anyhow::Result<ExecutionResult>;
-    fn epoch(&self) -> ChainEpoch;
-    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>>;
-    /// Loads and deserializes an object from the blockstore.
-    // fn load_state<T: de::DeserializeOwned>(&self, cid: &Cid)-> anyhow::Result<Option<T>>;
-    fn blockstore(&self) -> &dyn Blockstore;
-    fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
-}
-
-/// The result of a message execution.
-/// This duplicates a lot from an FVM-internal type, but is independent of VM.
-pub struct ExecutionResult {
-    /// Message receipt for the transaction.
-    pub receipt: Receipt,
-    /// Gas penalty from transaction, if any.
-    pub penalty: TokenAmount,
-    /// Tip given to miner from message.
-    pub miner_tip: TokenAmount,
-
-    // Gas tracing
-    pub gas_burned: i64,
-    pub base_fee_burn: TokenAmount,
-    pub over_estimation_burn: TokenAmount,
-
-    /// Execution trace information, for debugging.
-    pub trace: ExecutionTrace, // FIXME ExecutionTrace is an FVM internal type
-    pub message: String,
-}
-
-pub struct ActorState {
-    /// Link to code for the actor.
-    pub code: Cid,
-    /// Link to the state of the actor.
-    pub state: Cid,
-    /// Sequence of the actor.
-    pub sequence: u64,
-    /// Tokens available to the actor.
-    pub balance: TokenAmount,
-}
-
-pub type BenchExecutor<B, E> =
-    DefaultExecutor<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>;
-
+/// A workbench instance backed by a real FVM.
 pub struct FvmBench<B, E>
 where
     B: Blockstore + 'static,
@@ -77,6 +27,9 @@ where
 {
     executor: BenchExecutor<B, E>,
 }
+
+type BenchExecutor<B, E> =
+DefaultExecutor<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>;
 
 impl<B, E> FvmBench<B, E>
 where
@@ -93,8 +46,6 @@ where
     B: Blockstore,
     E: Externs,
 {
-    // Explicit messages increment the sender's nonce and charge for gas consumed.
-    // Implicit messages ignore the nonce and charge no gas (but still account for it).
     fn execute(&mut self, msg: Message, msg_length: usize) -> anyhow::Result<ExecutionResult> {
         self.executor.execute_message(msg, ApplyKind::Explicit, msg_length).map(ret_as_result)
     }
@@ -111,6 +62,10 @@ where
         self.executor.context().epoch
     }
 
+    fn store(&self) -> &dyn Blockstore {
+        self.executor.blockstore()
+    }
+
     fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
         let raw = self
             .executor
@@ -125,10 +80,6 @@ where
         }))
     }
 
-    fn blockstore(&self) -> &dyn Blockstore {
-        self.executor.blockstore()
-    }
-
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
         self.executor
             .state_tree()
@@ -137,6 +88,7 @@ where
     }
 }
 
+// Converts an FVM-internal application result to an API execution result.
 fn ret_as_result(ret: ApplyRet) -> ExecutionResult {
     ExecutionResult {
         receipt: ret.msg_receipt,
@@ -145,9 +97,31 @@ fn ret_as_result(ret: ApplyRet) -> ExecutionResult {
         gas_burned: ret.gas_burned,
         base_fee_burn: ret.base_fee_burn,
         over_estimation_burn: ret.over_estimation_burn,
-        trace: ret.exec_trace,
+        trace: trace_as_trace(ret.exec_trace),
         message: ret.failure_info.map_or("".to_string(), |f| f.to_string()),
     }
+}
+
+// Converts an FVM-internal trace to a workbench API trace.
+fn trace_as_trace(fvm_trace: fvm::trace::ExecutionTrace) -> ExecutionTrace {
+    let mut events = Vec::new();
+    for e in fvm_trace {
+        match e {
+            ExecutionEvent::GasCharge(e) => events.push(GasCharge {
+                name: e.name,
+                compute_milli: e.compute_gas.as_milligas(),
+                storage_milli: e.storage_gas.as_milligas(),
+            }),
+            ExecutionEvent::Call { from, to, method, params, value } => {
+                events.push(Call { from, to, method, params, value })
+            }
+            ExecutionEvent::CallReturn(return_value) => events.push(CallReturn { return_value }),
+            ExecutionEvent::CallAbort(exit_code) => events.push(CallAbort { exit_code }),
+            ExecutionEvent::CallError(e) => events.push(CallError { reason: e.0, errno: e.1 }),
+            _ => {} // Drop unexpected events silently
+        }
+    }
+    ExecutionTrace::new(events)
 }
 
 pub struct ExecutionWrangler<'a> {
@@ -237,7 +211,7 @@ impl<'a> ExecutionWrangler<'a> {
             Some(actor) => {
                 let block = self
                     .bench
-                    .blockstore()
+                    .store()
                     .get(&actor.state)
                     .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
 
@@ -285,11 +259,5 @@ impl<'a> ExecutionWrangler<'a> {
             0 // FIXME serialize and size
         };
         (msg, msg_length)
-    }
-}
-
-pub fn format_trace(trace: &ExecutionTrace) {
-    for event in trace {
-        println!("{:?}", event);
     }
 }

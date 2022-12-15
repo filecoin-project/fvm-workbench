@@ -18,22 +18,14 @@ use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use multihash::Code;
 
-use fvm_workbench_api::WorkbenchBuilder;
+use fvm_workbench_api::{Bench, WorkbenchBuilder};
 
 use crate::bench::FvmBench;
 
-// A workbench backed by a real FVM instance.
-// TODO:
-// - convenience setters for base fee, supply etc, abstract the Message
-// - ability to set a custom manifest
-
-/// A factory for workbench instances.
-/// Built-in actors must be installed before the workbench is ready for use,
-/// due to limitations of the underlying Machine (it won't observe state tree mutations
-/// made externally).
+/// A factory for workbench instances backed by a real FVM.
 /// Code for built-in actors may be loaded from either a bundle or a manifest, before
 /// actors can then be constructed.
-pub struct BenchBuilder<B, E>
+pub struct FvmBenchBuilder<B, E>
 where
     B: Blockstore + Clone + 'static,
     E: Externs + Clone + 'static,
@@ -45,9 +37,8 @@ where
     builtin_manifest: Option<Manifest>,
 }
 
-impl<B, E> BenchBuilder<B, E>
+impl<B, E> FvmBenchBuilder<B, E>
 where
-    // TODO: try B, E as a method parameter rather than type parameter
     B: Blockstore + Clone,
     E: Externs + Clone,
 {
@@ -60,7 +51,7 @@ where
         state_tree_version: StateTreeVersion,
         builtin_bundle: &[u8],
     ) -> anyhow::Result<(Self, Cid)> {
-        let mut bb = BenchBuilder::new_bare(blockstore, externs, nv, state_tree_version)?;
+        let mut bb = FvmBenchBuilder::new_bare(blockstore, externs, nv, state_tree_version)?;
         let manifest_data_cid = bb.install_builtin_actor_bundle(builtin_bundle)?;
         Ok((bb, manifest_data_cid))
     }
@@ -125,40 +116,6 @@ where
         todo!()
     }
 
-    /// Creates a workbench with the current state tree.
-    /// The System and Init actors must be created before the workbench can be built or used.
-    pub fn build(&mut self) -> anyhow::Result<FvmBench<B, E>> {
-        // Clone the context so the builder can be re-used for a new bench.
-        let mut machine_ctx = self.machine_ctx.clone();
-
-        // Flush the state tree to store and calculate the initial root.
-        let state_root = self.state_tree.flush().map_err(anyhow::Error::from)?;
-        machine_ctx.initial_state_root = state_root;
-
-        let engine_conf = (&machine_ctx.network).into();
-        let machine = DefaultMachine::new(
-            &Engine::new_default(engine_conf)?,
-            &machine_ctx,
-            self.state_tree.store().clone(),
-            self.externs.clone(),
-        )?;
-        let executor =
-            DefaultExecutor::<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>::new(
-                machine,
-            );
-        // Preload built-in actor code.
-        // This is crazy slow but necessary because it won't otherwise be loaded on demand,
-        // contrary to comments inside the FVM.
-        // Possibly we could expose some API to let the user select which actors to load.
-        // An alternative way is to build FVM with config=testing, but that will always load all of them.
-        // Note that if config=m2-native is set, all user actors will be built at this point.
-        executor.engine().preload(
-            executor.blockstore(),
-            self.builtin_manifest.as_ref().unwrap().builtin_actor_codes(),
-        )?;
-        Ok(FvmBench::new(executor))
-    }
-
     ///// Private helpers /////
 
     fn create_builtin_actor_internal(
@@ -188,7 +145,7 @@ where
     }
 }
 
-impl<B, E> WorkbenchBuilder for BenchBuilder<B, E>
+impl<B, E> WorkbenchBuilder for FvmBenchBuilder<B, E>
 where
     B: Blockstore + Clone,
     E: Externs + Clone,
@@ -223,6 +180,40 @@ where
         let new_id = self.state_tree.register_new_address(address)?;
         self.create_builtin_actor_internal(type_id, new_id, &state, balance)?;
         Ok(new_id)
+    }
+
+    /// Creates a workbench with the current state tree.
+    /// The System and Init actors must be created before the workbench can be built or used.
+    fn build(&mut self) -> anyhow::Result<Box<dyn Bench>> {
+        // Clone the context so the builder can be re-used for a new bench.
+        let mut machine_ctx = self.machine_ctx.clone();
+
+        // Flush the state tree to store and calculate the initial root.
+        let state_root = self.state_tree.flush().map_err(anyhow::Error::from)?;
+        machine_ctx.initial_state_root = state_root;
+
+        let engine_conf = (&machine_ctx.network).into();
+        let machine = DefaultMachine::new(
+            &Engine::new_default(engine_conf)?,
+            &machine_ctx,
+            self.state_tree.store().clone(),
+            self.externs.clone(),
+        )?;
+        let executor =
+            DefaultExecutor::<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>::new(
+                machine,
+            );
+        // Preload built-in actor code.
+        // This is crazy slow but necessary because it won't otherwise be loaded on demand,
+        // contrary to comments inside the FVM.
+        // Possibly we could expose some API to let the user select which actors to load.
+        // An alternative way is to build FVM with config=testing, but that will always load all of them.
+        // Note that if config=m2-native is set, all user actors will be built at this point.
+        executor.engine().preload(
+            executor.blockstore(),
+            self.builtin_manifest.as_ref().unwrap().builtin_actor_codes(),
+        )?;
+        Ok(Box::new(FvmBench::new(executor)))
     }
 }
 
