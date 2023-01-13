@@ -7,7 +7,6 @@ use fvm_shared::clock::ChainEpoch;
 use anyhow::anyhow;
 use fvm_shared::message::Message;
 use fvm_shared::bigint::Zero;
-use fvm_ipld_blockstore::Blockstore;
 use crate::{ActorState, Bench, ExecutionResult};
 
 pub struct ExecutionWrangler<'a> {

@@ -1,11 +1,11 @@
-use std::borrow::Cow;
 use fvm_ipld_encoding::RawBytes;
 use fvm_shared::address::Address;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::{ErrorNumber, ExitCode};
 use fvm_shared::{ActorID, MethodNum};
-use std::fmt::Debug;
 use itertools::Itertools;
+use std::borrow::Cow;
+use std::fmt::{Debug};
 
 /// A trace of a single message execution.
 /// A trace is a sequence of events.
@@ -16,6 +16,14 @@ pub struct ExecutionTrace {
 impl ExecutionTrace {
     pub fn new(events: Vec<ExecutionEvent>) -> Self {
         Self { events }
+    }
+
+    pub fn events(&self) -> &[ExecutionEvent] {
+        &self.events
+    }
+
+    pub fn format(&self) -> String {
+        self.events.iter().map(|e| format!("{:?}", e)).join("\n")
     }
 }
 
@@ -30,8 +38,5 @@ pub enum ExecutionEvent {
     CallReturn { return_value: RawBytes },
     CallAbort { exit_code: ExitCode },
     CallError { reason: String, errno: ErrorNumber },
-}
-
-pub fn format_trace(trace: &ExecutionTrace) -> String {
-    trace.events.iter().map(|e| format!("{:?}", e)).join("\n")
+    Log { msg: String },
 }

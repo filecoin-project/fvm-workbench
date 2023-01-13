@@ -2,22 +2,19 @@
 // The aim is to find APIs so that this test can be invoked directly in built-in actors from here,
 // using a workbench.
 
-use anyhow::anyhow;
 use cid::Cid;
-use cid::multihash::{Code, Multihash as OtherMultihash};
 use fil_actor_datacap::MintParams;
 use fil_actor_power::{CreateMinerParams, CreateMinerReturn};
 use fil_actor_verifreg::{AllocationRequest, AllocationRequests};
+use fil_actors_runtime::cbor::serialize;
+use fil_actors_runtime::runtime::policy_constants::MINIMUM_VERIFIED_ALLOCATION_SIZE;
+use fil_actors_runtime::runtime::Policy;
 use fil_actors_runtime::{
     DATACAP_TOKEN_ACTOR_ADDR, STORAGE_POWER_ACTOR_ADDR, VERIFIED_REGISTRY_ACTOR_ADDR,
 };
-use fil_actors_runtime::cbor::serialize;
-use fil_actors_runtime::runtime::Policy;
-use fil_actors_runtime::runtime::policy_constants::MINIMUM_VERIFIED_ALLOCATION_SIZE;
 use frc46_token::token::types::TransferFromParams;
-use fvm_ipld_blockstore::{Blockstore, MemoryBlockstore};
-use fvm_ipld_encoding::{BytesDe, RawBytes, ser};
-use fvm_shared::{ActorID, METHOD_SEND, MethodNum};
+use fvm_ipld_blockstore::MemoryBlockstore;
+use fvm_ipld_encoding::{ser, BytesDe, RawBytes};
 use fvm_shared::address::{Address, BLS_PUB_LEN};
 use fvm_shared::bigint::Zero;
 use fvm_shared::commcid::{FIL_COMMITMENT_SEALED, FIL_COMMITMENT_UNSEALED};
@@ -27,20 +24,21 @@ use fvm_shared::piece::PaddedPieceSize;
 use fvm_shared::sector::{RegisteredPoStProof, RegisteredSealProof};
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
-use rand_chacha::ChaCha8Rng;
+use fvm_shared::{ActorID, MethodNum, METHOD_SEND};
 use rand_chacha::rand_core::{RngCore, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
-use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_api::wrangler::ExecutionWrangler;
+use fvm_workbench_api::ExecutionResult;
+use fvm_workbench_api::WorkbenchBuilder;
+use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 use multihash::derive::Multihash;
 use multihash::MultihashDigest;
-use fvm_workbench_api::ExecutionResult;
-use fvm_workbench_api::trace::format_trace;
-use fvm_workbench_api::WorkbenchBuilder;
+use fvm_workbench_api::analysis::TraceAnalysis;
 
-/* Mint a token for client and transfer it to a receiver, exercising error cases */
+/* Mint a token for client and transfer it to a receiver. */
 #[test]
 fn datacap_transfer_scenario() {
     let policy = Policy::default();
@@ -91,13 +89,13 @@ fn datacap_transfer_scenario() {
         VERIFIED_REGISTRY_ACTOR_ADDR,
         DATACAP_TOKEN_ACTOR_ADDR,
         TokenAmount::zero(),
-        fil_actor_datacap::Method::Mint as u64,
+        fil_actor_datacap::Method::MintExported as u64,
         &mint_params,
     )
     .unwrap();
 
     let alloc = AllocationRequest {
-        provider: maddr,
+        provider: maddr.id().unwrap(),
         data: make_piece_cid("datacap-test-alloc".as_bytes()),
         size: PaddedPieceSize(MINIMUM_VERIFIED_ALLOCATION_SIZE as u64),
         term_min: policy.minimum_verified_allocation_term,
@@ -121,12 +119,14 @@ fn datacap_transfer_scenario() {
         operator_address,
         DATACAP_TOKEN_ACTOR_ADDR,
         TokenAmount::zero(),
-        fil_actor_datacap::Method::TransferFrom as u64,
+        fil_actor_datacap::Method::TransferFromExported as u64,
         &transfer_from_params,
     )
     .unwrap();
     assert_eq!(ExitCode::OK, result.receipt.exit_code);
-    println!("trace: {}", format_trace(&result.trace));
+    println!("{}", result.trace.format());
+    let analysis = TraceAnalysis::build(result.trace);
+    println!("{}", analysis.format_spans());
 }
 
 pub fn apply_ok<T: ser::Serialize + ?Sized>(

@@ -11,6 +11,7 @@ use fvm_shared::ActorID;
 
 pub mod trace;
 pub mod wrangler;
+pub mod analysis;
 
 /// A factory for workbench instances.
 /// Built-in actors must be installed before the workbench can be created.

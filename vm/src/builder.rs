@@ -63,8 +63,9 @@ where
         nv: NetworkVersion,
         state_tree_version: StateTreeVersion,
     ) -> anyhow::Result<Self> {
-        let network_conf = NetworkConfig::new(nv);
-        // network_conf.enable_actor_debugging(); // This doesn't seem to do anything.
+        let mut network_conf = NetworkConfig::new(nv);
+        // Enabling debugging is necessary to get log events in traces.
+        network_conf.enable_actor_debugging();
         let machine_ctx = MachineContext {
             network: network_conf,
             epoch: 0,

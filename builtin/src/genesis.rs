@@ -6,7 +6,6 @@ use fil_actors_runtime::{
     STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID, VERIFIED_REGISTRY_ACTOR_ID,
 };
 use fil_actors_runtime::runtime::builtins::Type;
-use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::ActorID;
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
@@ -56,8 +55,7 @@ impl GenesisResult {
 pub fn create_genesis_actors<B: WorkbenchBuilder>(
     builder: &mut B,
     spec: &GenesisSpec,
-) -> anyhow::Result<GenesisResult>
-{
+) -> anyhow::Result<GenesisResult> {
     // System actor
     let system_state = fil_actor_system::State { builtin_actors: spec.system_manifest_cid };
     builder.create_singleton_actor(
