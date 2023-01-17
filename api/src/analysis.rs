@@ -89,7 +89,7 @@ impl TraceAnalysis {
         let root_span = spans.get_mut(top_idx).unwrap();
         root_span.add_self_to_total_gas();
 
-        return TraceAnalysis { spans };
+        TraceAnalysis { spans }
     }
 
     pub fn format_spans(&self) -> String {
@@ -123,14 +123,14 @@ impl Span {
     /// Adds to this span's self gas.
     fn add_self_gas(&mut self, label: String, c: GasCharge) {
         self.self_gas_sum += c;
-        *self.self_gas.entry(label).or_insert(GasCharge::zero()) += c;
+        *self.self_gas.entry(label).or_insert_with(GasCharge::zero) += c;
     }
 
     /// Adds this span's self gas to its total gas.
     fn add_self_to_total_gas(&mut self) {
         self.total_gas_sum += self.self_gas_sum;
         for (label, c) in self.self_gas.iter() {
-            *self.total_gas.entry(label.to_string()).or_insert(GasCharge::zero()) += *c;
+            *self.total_gas.entry(label.to_string()).or_insert_with(GasCharge::zero) += *c;
         }
     }
 
@@ -138,7 +138,7 @@ impl Span {
     fn add_other_to_total_gas(&mut self, other: &Span) {
         self.total_gas_sum += other.total_gas_sum;
         for (label, c) in &other.total_gas {
-            *self.total_gas.entry(label.clone()).or_insert(GasCharge::zero()) += *c;
+            *self.total_gas.entry(label.clone()).or_insert_with(GasCharge::zero) += *c;
         }
     }
 }

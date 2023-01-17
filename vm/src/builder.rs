@@ -2,20 +2,20 @@ use anyhow::{anyhow, Context};
 use cid::Cid;
 use futures::executor::block_on;
 use fvm::call_manager::DefaultCallManager;
-use fvm::DefaultKernel;
 use fvm::executor::DefaultExecutor;
 use fvm::externs::Externs;
 use fvm::machine::{DefaultMachine, Engine, Machine, MachineContext, Manifest, NetworkConfig};
 use fvm::state_tree::{ActorState, StateTree};
+use fvm::DefaultKernel;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_car::load_car_unchecked;
-use fvm_ipld_encoding::CborStore;
 use fvm_ipld_encoding::ser::Serialize;
-use fvm_shared::ActorID;
+use fvm_ipld_encoding::CborStore;
 use fvm_shared::address::Address;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
+use fvm_shared::ActorID;
 use multihash::Code;
 
 use fvm_workbench_api::{Bench, WorkbenchBuilder};
@@ -76,7 +76,7 @@ where
             tracing: true,
         };
         let state_tree =
-            StateTree::new(blockstore.clone(), state_tree_version).map_err(anyhow::Error::from)?;
+            StateTree::new(blockstore, state_tree_version).map_err(anyhow::Error::from)?;
 
         Ok(Self {
             externs,

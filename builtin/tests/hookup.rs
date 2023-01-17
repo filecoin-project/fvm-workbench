@@ -1,20 +1,19 @@
 use fil_actors_runtime::INIT_ACTOR_ADDR;
-use fvm::trace::ExecutionTrace;
 use fvm_ipld_blockstore::MemoryBlockstore;
 use fvm_ipld_encoding::RawBytes;
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
-use fvm_shared::METHOD_SEND;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
-use fvm_workbench_api::trace::format_trace;
+use fvm_shared::METHOD_SEND;
 
-use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
+use fvm_workbench_api::analysis::TraceAnalysis;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
+use fvm_workbench_api::WorkbenchBuilder;
+use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
-use fvm_workbench_api::WorkbenchBuilder;
 
 #[test]
 fn test_hookup() {
@@ -32,7 +31,7 @@ fn test_hookup() {
     let mut bench = builder.build().unwrap();
 
     let mut wrangler = ExecutionWrangler::new_default(&mut *bench);
-    let ret = wrangler
+    let result = wrangler
         .execute(
             genesis.faucet_address(),
             INIT_ACTOR_ADDR.clone(),
@@ -42,6 +41,8 @@ fn test_hookup() {
         )
         .unwrap();
 
-    assert_eq!(ExitCode::OK, ret.receipt.exit_code);
-    println!("trace: {:?}", format_trace(&ret.trace));
+    assert_eq!(ExitCode::OK, result.receipt.exit_code);
+    println!("{}", result.trace.format());
+    let analysis = TraceAnalysis::build(result.trace);
+    println!("{}", analysis.format_spans());
 }

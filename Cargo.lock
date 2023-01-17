@@ -1805,6 +1805,8 @@ name = "fvm-workbench-builtin-actors"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blake2b_simd",
+ "bls-signatures",
  "cid",
  "fil_actor_account",
  "fil_actor_cron",
@@ -1825,11 +1827,13 @@ dependencies = [
  "fvm-workbench-api",
  "fvm-workbench-vm",
  "fvm_ipld_amt",
+ "fvm_ipld_bitfield",
  "fvm_ipld_blockstore",
  "fvm_ipld_car 0.5.0",
  "fvm_ipld_encoding 0.2.3",
  "fvm_ipld_hamt",
  "fvm_shared",
+ "libsecp256k1",
  "multihash",
  "rand_chacha",
  "thiserror",

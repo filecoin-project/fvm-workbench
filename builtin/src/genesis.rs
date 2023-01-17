@@ -1,16 +1,16 @@
 use cid::Cid;
-use fil_actors_runtime::{
-    BURNT_FUNDS_ACTOR_ADDR, BURNT_FUNDS_ACTOR_ID, CRON_ACTOR_ID,
-    DATACAP_TOKEN_ACTOR_ID, INIT_ACTOR_ID, REWARD_ACTOR_ID,
-    STORAGE_MARKET_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ID, STORAGE_POWER_ACTOR_ADDR,
-    STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID, VERIFIED_REGISTRY_ACTOR_ID,
-};
 use fil_actors_runtime::runtime::builtins::Type;
-use fvm_shared::ActorID;
+use fil_actors_runtime::{
+    make_empty_map, BURNT_FUNDS_ACTOR_ADDR, BURNT_FUNDS_ACTOR_ID, CRON_ACTOR_ID,
+    DATACAP_TOKEN_ACTOR_ID, INIT_ACTOR_ID, REWARD_ACTOR_ID, STORAGE_MARKET_ACTOR_ADDR,
+    STORAGE_MARKET_ACTOR_ID, STORAGE_POWER_ACTOR_ADDR, STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID,
+    VERIFIED_REGISTRY_ACTOR_ID,
+};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::sector::StoragePower;
+use fvm_shared::{ActorID, HAMT_BIT_WIDTH};
 
 use fvm_workbench_api::WorkbenchBuilder;
 
@@ -50,7 +50,6 @@ impl GenesisResult {
         Address::new_id(self.faucet_id)
     }
 }
-
 
 pub fn create_genesis_actors<B: WorkbenchBuilder>(
     builder: &mut B,
@@ -122,13 +121,14 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
     )?;
 
     // A multisig and signer to act as verified registry root.
-    let verifreg_signer_state = fil_actor_account::State { address: spec.verifreg_signer.clone() };
+    let verifreg_signer_state = fil_actor_account::State { address: spec.verifreg_signer };
     let verifreg_signer_id = builder.create_builtin_actor(
         Type::Account as u32,
         &spec.verifreg_signer,
         &verifreg_signer_state,
         TokenAmount::zero(),
     )?;
+    let empty_root = make_empty_map::<_, ()>(builder.store(), HAMT_BIT_WIDTH).flush().unwrap();
     let verifreg_root_state = fil_actor_multisig::State {
         signers: vec![Address::new_id(verifreg_signer_id)],
         num_approvals_threshold: 1,
@@ -136,7 +136,7 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
         initial_balance: Default::default(),
         start_epoch: 0,
         unlock_duration: 0,
-        pending_txs: Default::default(),
+        pending_txs: empty_root,
     };
     let verifreg_root_id = builder.create_builtin_actor(
         Type::Multisig as u32,
