@@ -84,12 +84,6 @@ impl Default for FakeExterns {
     }
 }
 
-impl Chain for FakeExterns {
-    fn get_tipset_cid(&self, epoch: ChainEpoch) -> anyhow::Result<Cid> {
-        self.get_tipset_cid(epoch)
-    }
-}
-
 impl Externs for FakeExterns {}
 // impl <'a> Externs for &'a FakeExterns{}
 
@@ -124,9 +118,8 @@ impl Consensus for FakeExterns {
     }
 }
 
-// For FVM v3, network version 18.
-// impl Chain for FakeExterns {
-//     fn get_tipset_cid(&self, epoch: ChainEpoch) -> anyhow::Result<Cid> {
-//         (self.tipset)(epoch)
-//     }
-// }
+impl Chain for FakeExterns {
+    fn get_tipset_cid(&self, epoch: ChainEpoch) -> anyhow::Result<Cid> {
+        (self.tipset)(epoch)
+    }
+}

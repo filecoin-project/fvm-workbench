@@ -48,6 +48,7 @@ pub enum ExecutionEvent {
     },
     CallReturn {
         return_value: Option<IpldBlock>,
+        exit_code: ExitCode,
     },
     CallAbort {
         exit_code: ExitCode,

@@ -66,10 +66,12 @@ impl Account {
         Address::new_id(self.id)
     }
 
+    #[allow(dead_code)]
     pub fn key_addr(&self) -> Address {
         self.key.addr
     }
 
+    #[allow(dead_code)]
     pub fn sign(&self, msg: &[u8]) -> anyhow::Result<Signature> {
         self.key.sign(msg)
     }
@@ -176,6 +178,7 @@ pub enum MhCode {
     Sha256TruncPaddedFake,
 }
 
+#[allow(dead_code)]
 pub fn bf_all(bf: BitField) -> Vec<u64> {
     bf.bounded_iter(Policy::default().addressed_sectors_max).unwrap().collect()
 }

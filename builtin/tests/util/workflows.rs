@@ -91,6 +91,7 @@ pub fn create_miner(
     Ok((res.id_address.id().unwrap(), res.robust_address))
 }
 
+#[allow(dead_code)]
 pub fn verifreg_add_verifier(
     w: &mut ExecutionWrangler,
     verifier: ActorID,

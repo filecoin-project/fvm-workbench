@@ -6,14 +6,11 @@ use fvm::machine::{DefaultMachine, Machine};
 use fvm::trace::ExecutionEvent;
 use fvm::DefaultKernel;
 use fvm_ipld_blockstore::Blockstore;
-use fvm_ipld_encoding::RawBytes;
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
-use fvm_workbench_api::trace::ExecutionEvent::{
-    Call, CallAbort, CallError, CallReturn, GasCharge, Log,
-};
+use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
 use fvm_workbench_api::trace::ExecutionTrace;
 use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
 
@@ -113,7 +110,7 @@ fn trace_as_trace(fvm_trace: fvm::trace::ExecutionTrace) -> ExecutionTrace {
                 events.push(Call { from, to, method, params, value })
             }
             ExecutionEvent::CallReturn(exit_code, return_value) => {
-                events.push(CallReturn { return_value })
+                events.push(CallReturn { exit_code, return_value })
             }
             ExecutionEvent::CallError(e) => events.push(CallError { reason: e.0, errno: e.1 }),
             _ => todo!(),

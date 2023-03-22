@@ -5,7 +5,7 @@ use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::DefaultExecutor;
 use fvm::externs::Externs;
-use fvm::machine::{DefaultMachine, Machine, MachineContext, Manifest, NetworkConfig};
+use fvm::machine::{DefaultMachine, MachineContext, Manifest, NetworkConfig};
 use fvm::state_tree::{ActorState, StateTree};
 use fvm::DefaultKernel;
 use fvm_ipld_blockstore::Blockstore;
@@ -69,7 +69,7 @@ where
         let machine_ctx = MachineContext {
             network: network_conf,
             epoch: 0,
-            timestamp: 0, // For FVM v3
+            timestamp: 0,
             base_fee: TokenAmount::from_atto(100),
             initial_state_root: Default::default(),
             circ_supply: TokenAmount::from_whole(1_000_000),
@@ -208,17 +208,6 @@ where
                 EnginePool::new_default(engine_conf)?,
                 machine,
             )?;
-        // Preload built-in actor code.
-        // This is crazy slow but necessary because it won't otherwise be loaded on demand,
-        // contrary to comments inside the FVM.
-        // Possibly we could expose some API to let the user select which actors to load.
-        // An alternative way is to build FVM with config=testing, but that will always load all of them.
-        // Note that if config=m2-native is set, all user actors will be built at this point.
-        // FIXME: no longer exists in v3 is it still necessary?
-        // executor.engine().preload(
-        //     executor.blockstore(),
-        //     self.builtin_manifest.as_ref().unwrap().builtin_actor_codes(),
-        // )?;
         Ok(Box::new(FvmBench::new(executor)))
     }
 }
