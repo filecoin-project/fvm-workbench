@@ -18,7 +18,6 @@ use fvm_shared::piece::PaddedPieceSize;
 use fvm_shared::sector::{RegisteredSealProof, StoragePower};
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
-
 use fvm_workbench_api::analysis::TraceAnalysis;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::ExecutionResult;
@@ -31,7 +30,6 @@ use crate::util::*;
 use crate::workflows::*;
 
 mod util;
-mod workflows;
 
 #[allow(dead_code)]
 struct Addrs {
@@ -80,7 +78,7 @@ fn publish_storage_deals() {
     batcher.stage(&a.verified_client, "deal1", options.clone());
     batcher.stage(&a.verified_client, "deal2", options.clone());
     batcher.stage(&a.verified_client, "deal3", options.clone());
-    batcher.stage(&a.verified_client, "deal4", options.clone());
+    batcher.stage(&a.verified_client, "deal4", options);
 
     let result = batcher.publish_ok(&mut w, a.worker.id_addr());
     let ret: PublishStorageDealsReturn = result.receipt.return_data.deserialize().unwrap();
@@ -100,7 +98,7 @@ fn setup(w: &mut ExecutionWrangler, genesis: &GenesisResult) -> (Addrs, ChainEpo
         .clone();
     let owner = worker.clone();
     let accounts =
-        create_accounts(w, genesis.faucet_id, 6, balance.clone(), SignatureType::Secp256k1)
+        create_accounts(w, genesis.faucet_id, 6, balance, SignatureType::Secp256k1)
             .unwrap();
     let (client1, client2, not_miner, cheap_client, verifier, verified_client) = (
         accounts[0].clone(),

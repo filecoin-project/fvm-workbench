@@ -34,7 +34,7 @@ fn test_hookup() {
     let result = wrangler
         .execute(
             genesis.faucet_address(),
-            INIT_ACTOR_ADDR.clone(),
+            INIT_ACTOR_ADDR,
             METHOD_SEND,
             RawBytes::default(),
             TokenAmount::zero(),
