@@ -36,8 +36,8 @@ fn datacap_transfer_scenario() {
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         MemoryBlockstore::new(),
         FakeExterns::new(),
-        NetworkVersion::V16,
-        StateTreeVersion::V4,
+        NetworkVersion::V18,
+        StateTreeVersion::V5,
         actors_v10::BUNDLE_CAR,
     )
     .unwrap();

@@ -1,11 +1,12 @@
-use fvm_ipld_encoding::RawBytes;
+use std::borrow::Cow;
+use std::fmt::Debug;
+
+use fvm_ipld_encoding::ipld_block::IpldBlock;
 use fvm_shared::address::Address;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::{ErrorNumber, ExitCode};
 use fvm_shared::{ActorID, MethodNum};
 use itertools::Itertools;
-use std::borrow::Cow;
-use std::fmt::{Debug};
 
 /// A trace of a single message execution.
 /// A trace is a sequence of events.
@@ -33,10 +34,29 @@ impl ExecutionTrace {
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ExecutionEvent {
-    GasCharge { name: Cow<'static, str>, compute_milli: i64, storage_milli: i64 },
-    Call { from: ActorID, to: Address, method: MethodNum, params: RawBytes, value: TokenAmount },
-    CallReturn { return_value: RawBytes },
-    CallAbort { exit_code: ExitCode },
-    CallError { reason: String, errno: ErrorNumber },
-    Log { msg: String },
+    GasCharge {
+        name: Cow<'static, str>,
+        compute_milli: u64,
+        other_milli: u64,
+    },
+    Call {
+        from: ActorID,
+        to: Address,
+        method: MethodNum,
+        params: Option<IpldBlock>,
+        value: TokenAmount,
+    },
+    CallReturn {
+        return_value: Option<IpldBlock>,
+    },
+    CallAbort {
+        exit_code: ExitCode,
+    },
+    CallError {
+        reason: String,
+        errno: ErrorNumber,
+    },
+    Log {
+        msg: String,
+    },
 }

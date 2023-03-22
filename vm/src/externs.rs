@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use cid::Cid;
+use fvm::externs::Chain;
 use fvm::externs::{Consensus, Externs, Rand};
 use fvm_ipld_encoding::DAG_CBOR;
 use fvm_shared::clock::ChainEpoch;
@@ -80,6 +81,12 @@ impl Default for FakeExterns {
                 Multihash::wrap(IDENTITY_HASH, &0u64.to_be_bytes()).unwrap(),
             )),
         }
+    }
+}
+
+impl Chain for FakeExterns {
+    fn get_tipset_cid(&self, epoch: ChainEpoch) -> anyhow::Result<Cid> {
+        self.get_tipset_cid(epoch)
     }
 }
 

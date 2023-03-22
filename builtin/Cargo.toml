@@ -10,32 +10,32 @@ edition = "2021"
 fvm-workbench-vm = { path = "../vm" }
 fvm-workbench-api = { path = "../api" }
 
-actors-v10 = { package = "fil_builtin_actors_bundle", version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd" }
-fil_actor_account = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_cron = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_datacap = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_init = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_market = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_miner = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_multisig = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_paych = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_power = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_reward = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_system = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actor_verifreg = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
-fil_actors_runtime = { version = "10.0.0-alpha.1", git = "https://github.com/filecoin-project/builtin-actors", rev = "d2924bfd", features = [] }
+actors-v10 = { package = "fil_builtin_actors_bundle", version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps" }
+fil_actor_account = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_cron = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_datacap = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_init = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_market = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_miner = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_multisig = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_paych = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_power = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_reward = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_system = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actor_verifreg = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
+fil_actors_runtime = { version = "10.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "alex/update-deps", features = [] }
 
 fvm = { version = "3.0.0", default-features = false, features = ["testing"] }
 fvm_shared = { version = "3.0.0", default-features = false }
 fvm_ipld_hamt = "0.6.1"
 fvm_ipld_amt = { version = "0.5.1", features = ["go-interop"] }
-fvm_ipld_car = { version = "~0.5.0"}
+fvm_ipld_car = { version = "~0.6.0"}
 fvm_ipld_blockstore = { version = "~0.1.1"}
 fvm_ipld_encoding = "0.3.3"
 fvm_ipld_bitfield = { version = "~0.5.2"}
 
 # Used directly in some tests
-frc46_token = "~3.1.0"
+frc46_token = "5.0.0"
 
 anyhow = "~1.0.47"
 blake2b_simd = "1.0.0"

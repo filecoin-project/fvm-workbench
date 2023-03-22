@@ -57,8 +57,8 @@ fn publish_storage_deals() {
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         MemoryBlockstore::new(),
         FakeExterns::new(),
-        NetworkVersion::V16,
-        StateTreeVersion::V4,
+        NetworkVersion::V18,
+        StateTreeVersion::V5,
         actors_v10::BUNDLE_CAR,
     )
     .unwrap();
@@ -98,8 +98,7 @@ fn setup(w: &mut ExecutionWrangler, genesis: &GenesisResult) -> (Addrs, ChainEpo
         .clone();
     let owner = worker.clone();
     let accounts =
-        create_accounts(w, genesis.faucet_id, 6, balance, SignatureType::Secp256k1)
-            .unwrap();
+        create_accounts(w, genesis.faucet_id, 6, balance, SignatureType::Secp256k1).unwrap();
     let (client1, client2, not_miner, cheap_client, verifier, verified_client) = (
         accounts[0].clone(),
         accounts[1].clone(),

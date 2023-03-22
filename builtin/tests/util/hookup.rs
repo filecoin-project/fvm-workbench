@@ -7,7 +7,6 @@ use fvm_shared::error::ExitCode;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::METHOD_SEND;
-
 use fvm_workbench_api::analysis::TraceAnalysis;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::WorkbenchBuilder;
@@ -20,8 +19,8 @@ fn test_hookup() {
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         MemoryBlockstore::new(),
         FakeExterns::new(),
-        NetworkVersion::V16,
-        StateTreeVersion::V4,
+        NetworkVersion::V18,
+        StateTreeVersion::V5,
         actors_v10::BUNDLE_CAR,
     )
     .unwrap();

@@ -106,6 +106,9 @@ impl AccountKey {
             Protocol::Actor => {
                 panic!("cannot sign with actor address")
             }
+            Protocol::Delegated => {
+                panic!("delegated signing not implemented")
+            }
         }
     }
 
