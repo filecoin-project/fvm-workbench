@@ -16,7 +16,6 @@
 // Move the VM package into a crate with deps on FVM.
 // Create a new repo for hookup (builtin-actors-workbench).
 
-
 // This API could move to built-in actors repo, or FVM *shared* repo, or
 // stay here to be depended on by a builtin-workbench.
 // * VM package contains low-level VM wrapper, primitives, but some abstraction over FVM's raw API.
@@ -24,7 +23,6 @@
 // An adapter package implements the API in terms of the VM.
 // Tests in built-in actors are implemented in terms of the driver API, and can be executed
 // against a fake VM there, or a real VM from builtin-workbench.
-
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
