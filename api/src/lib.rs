@@ -74,6 +74,7 @@ pub trait Bench {
 
 /// The result of a message execution.
 /// This duplicates a lot from an FVM-internal type, but is independent of VM.
+#[derive(Clone, Debug)]
 pub struct ExecutionResult {
     /// Message receipt for the transaction.
     pub receipt: Receipt,

@@ -10,6 +10,7 @@ use itertools::Itertools;
 
 /// A trace of a single message execution.
 /// A trace is a sequence of events.
+#[derive(Clone, Debug)]
 pub struct ExecutionTrace {
     events: Vec<ExecutionEvent>,
 }
