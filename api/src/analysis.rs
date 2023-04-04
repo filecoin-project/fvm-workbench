@@ -1,9 +1,11 @@
-use crate::trace::{ExecutionEvent, ExecutionTrace};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::{Add, AddAssign};
-use num_format::{Locale, ToFormattedString};
+
 use itertools::Itertools;
+use num_format::{Locale, ToFormattedString};
+
+use crate::trace::{ExecutionEvent, ExecutionTrace};
 
 /// Analysis of an execution trace.
 /// Analysis takes the form of a collection of spans, each summarising some section of
@@ -32,9 +34,9 @@ impl TraceAnalysis {
         // Accumulate gas directly consumed by each span
         for event in trace.events() {
             match event {
-                ExecutionEvent::GasCharge { name, compute_milli, storage_milli } => {
+                ExecutionEvent::GasCharge { name, compute_milli, other_milli } => {
                     // Add gas to top span in the call stack.
-                    let charge = GasCharge::new_millis(*compute_milli, *storage_milli);
+                    let charge = GasCharge::new_millis(*compute_milli, *other_milli);
                     let top_span = spans.get_mut(*call_stack.last().unwrap()).unwrap();
                     top_span.add_self_gas(name.to_string(), charge);
                     // Add gas to all open named spans.
@@ -78,7 +80,6 @@ impl TraceAnalysis {
                         let closed_idx = named_spans.get_mut(label).unwrap().pop().unwrap();
                         let closed_span = spans.get_mut(closed_idx).unwrap();
                         closed_span.add_self_to_total_gas();
-
                     }
                 }
             }
@@ -174,15 +175,15 @@ fn format_gas_bits(sum: GasCharge, charges: &HashMap<String, GasCharge>) -> Stri
 /// these dimensions into a total scalar gas cost.
 #[derive(Copy, Clone, Debug)]
 struct GasCharge {
-    compute_milli: i64,
-    storage_milli: i64,
+    compute_milli: u64,
+    other_milli: u64,
 }
 
 impl GasCharge {
     /// Creates a new gas charge amount.
     /// Note that parameters are milligas.
-    pub fn new_millis(compute_milli: i64, storage_milli: i64) -> Self {
-        Self { compute_milli, storage_milli }
+    pub fn new_millis(compute_milli: u64, other_milli: u64) -> Self {
+        Self { compute_milli, other_milli }
     }
 
     /// Creates a zero gas charge amount.
@@ -191,7 +192,7 @@ impl GasCharge {
     }
 
     /// Returns the total gas charge amount, summing the dimensions.
-    pub fn total(&self) -> i64 {
+    pub fn total(&self) -> u64 {
         let millis = self.total_milli();
         let units = millis / 1000;
         // Round up
@@ -203,8 +204,8 @@ impl GasCharge {
     }
 
     /// Returns the total gas charge amount in milligas.
-    pub fn total_milli(&self) -> i64 {
-        self.compute_milli + self.storage_milli
+    pub fn total_milli(&self) -> u64 {
+        self.compute_milli + self.other_milli
     }
 }
 
@@ -214,7 +215,7 @@ impl Add for GasCharge {
     fn add(self, rhs: Self) -> Self::Output {
         GasCharge::new_millis(
             self.compute_milli + rhs.compute_milli,
-            self.storage_milli + rhs.storage_milli,
+            self.other_milli + rhs.other_milli,
         )
     }
 }
@@ -222,6 +223,6 @@ impl Add for GasCharge {
 impl AddAssign for GasCharge {
     fn add_assign(&mut self, rhs: Self) {
         self.compute_milli += rhs.compute_milli;
-        self.storage_milli += rhs.storage_milli;
+        self.other_milli += rhs.other_milli;
     }
 }

@@ -10,13 +10,15 @@ use fvm_shared::crypto::signature::Signature;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
 use fvm_shared::{ActorID, MethodNum};
+use fvm_workbench_api::wrangler::ExecutionWrangler;
+use fvm_workbench_api::ExecutionResult;
 use multihash::derive::Multihash;
 use multihash::MultihashDigest;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::ExecutionResult;
+pub mod hookup;
+pub mod workflows;
 
 pub fn apply_ok<T: ser::Serialize + ?Sized>(
     w: &mut ExecutionWrangler,
@@ -64,10 +66,12 @@ impl Account {
         Address::new_id(self.id)
     }
 
+    #[allow(dead_code)]
     pub fn key_addr(&self) -> Address {
         self.key.addr
     }
 
+    #[allow(dead_code)]
     pub fn sign(&self, msg: &[u8]) -> anyhow::Result<Signature> {
         self.key.sign(msg)
     }
@@ -103,6 +107,9 @@ impl AccountKey {
             }
             Protocol::Actor => {
                 panic!("cannot sign with actor address")
+            }
+            Protocol::Delegated => {
+                panic!("delegated signing not implemented")
             }
         }
     }
@@ -171,6 +178,7 @@ pub enum MhCode {
     Sha256TruncPaddedFake,
 }
 
+#[allow(dead_code)]
 pub fn bf_all(bf: BitField) -> Vec<u64> {
     bf.bounded_iter(Policy::default().addressed_sectors_max).unwrap().collect()
 }

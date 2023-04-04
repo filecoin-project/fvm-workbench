@@ -10,7 +10,6 @@ use fil_actors_runtime::runtime::Policy;
 use fil_actors_runtime::{DATACAP_TOKEN_ACTOR_ADDR, VERIFIED_REGISTRY_ACTOR_ADDR};
 use frc46_token::token::types::TransferFromParams;
 use fvm_ipld_blockstore::MemoryBlockstore;
-use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::crypto::signature::SignatureType;
 use fvm_shared::econ::TokenAmount;
@@ -18,7 +17,6 @@ use fvm_shared::piece::PaddedPieceSize;
 use fvm_shared::sector::RegisteredSealProof;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
-
 use fvm_workbench_api::analysis::TraceAnalysis;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::WorkbenchBuilder;
@@ -28,9 +26,7 @@ use fvm_workbench_vm::externs::FakeExterns;
 
 use crate::util::*;
 use crate::workflows::*;
-
 mod util;
-mod workflows;
 
 /* Mint a token for client and transfer it to a receiver. */
 #[test]
@@ -40,8 +36,8 @@ fn datacap_transfer_scenario() {
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         MemoryBlockstore::new(),
         FakeExterns::new(),
-        NetworkVersion::V16,
-        StateTreeVersion::V4,
+        NetworkVersion::V18,
+        StateTreeVersion::V5,
         actors_v10::BUNDLE_CAR,
     )
     .unwrap();
@@ -105,7 +101,7 @@ fn datacap_transfer_scenario() {
         from: client.id_addr(),
         amount: TokenAmount::from_whole(MINIMUM_VERIFIED_ALLOCATION_SIZE),
         operator_data: serialize(
-            &AllocationRequests { allocations: vec![alloc.clone()], extensions: vec![] },
+            &AllocationRequests { allocations: vec![alloc], extensions: vec![] },
             "operator data",
         )
         .unwrap(),

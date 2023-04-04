@@ -1,5 +1,7 @@
 use std::rc::Rc;
+
 use cid::Cid;
+use fvm::externs::Chain;
 use fvm::externs::{Consensus, Externs, Rand};
 use fvm_ipld_encoding::DAG_CBOR;
 use fvm_shared::clock::ChainEpoch;
@@ -17,7 +19,7 @@ pub fn const_randomness(v: [u8; 32]) -> RandomnessSource {
 
 /// Provides consensus fault evaluation externally.
 pub type ConsensusFaultSource =
-Rc<dyn Fn(&[u8], &[u8], &[u8]) -> anyhow::Result<(Option<consensus::ConsensusFault>, i64)>>;
+    Rc<dyn Fn(&[u8], &[u8], &[u8]) -> anyhow::Result<(Option<consensus::ConsensusFault>, i64)>>;
 
 /// Returns a constant evaluation of consensus fault evidence.
 pub fn const_consensus_fault(
@@ -47,15 +49,7 @@ pub struct FakeExterns {
 impl FakeExterns {
     /// Returns a new fake externs that returns constant zero values for all calls.
     pub fn new() -> Self {
-        Self {
-            chain_randomness: const_randomness([0; 32]),
-            beacon_randomness: const_randomness([0; 32]),
-            consensus_fault: const_consensus_fault(None, 0),
-            tipset: const_tipset(Cid::new_v1(
-                DAG_CBOR,
-                Multihash::wrap(IDENTITY_HASH, &0u64.to_be_bytes()).unwrap(),
-            )),
-        }
+        Self::default()
     }
 
     pub fn with_chain_randomness(mut self, randomness: RandomnessSource) -> Self {
@@ -73,6 +67,20 @@ impl FakeExterns {
     pub fn with_tipset(mut self, tipset: TipsetSource) -> Self {
         self.tipset = tipset;
         self
+    }
+}
+
+impl Default for FakeExterns {
+    fn default() -> Self {
+        Self {
+            chain_randomness: const_randomness([0; 32]),
+            beacon_randomness: const_randomness([0; 32]),
+            consensus_fault: const_consensus_fault(None, 0),
+            tipset: const_tipset(Cid::new_v1(
+                DAG_CBOR,
+                Multihash::wrap(IDENTITY_HASH, &0u64.to_be_bytes()).unwrap(),
+            )),
+        }
     }
 }
 
@@ -110,9 +118,8 @@ impl Consensus for FakeExterns {
     }
 }
 
-// For FVM v3, network version 18.
-// impl Chain for FakeExterns {
-//     fn get_tipset_cid(&self, epoch: ChainEpoch) -> anyhow::Result<Cid> {
-//         (self.tipset)(epoch)
-//     }
-// }
+impl Chain for FakeExterns {
+    fn get_tipset_cid(&self, epoch: ChainEpoch) -> anyhow::Result<Cid> {
+        (self.tipset)(epoch)
+    }
+}

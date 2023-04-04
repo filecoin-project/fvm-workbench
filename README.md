@@ -32,6 +32,14 @@ as few assumptions as possible about how you want to use it.
 This crate does not depend on the built-in actors implementation, 
 but users will need to install built-in actors for the VM to function.
 
+*For Apple-silicon Macs* you will need the following in `.cargo/config.toml` in order to compile
+the proof crates.
+
+```
+[build]
+target = "x86_64-apple-darwin"
+```
+
 ### `builtin`
 The `builtin` crate depends on the built-in actors implementation 
 and provides methods for establishing initial state in a VM, which depends on the actors in use.

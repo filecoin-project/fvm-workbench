@@ -1,18 +1,20 @@
-use fvm_shared::econ::TokenAmount;
 use std::collections::HashMap;
-use fvm_shared::{ActorID, BLOCK_GAS_LIMIT, MethodNum};
-use fvm_shared::address::Address;
-use fvm_ipld_encoding::{de, from_slice, RawBytes};
-use fvm_shared::clock::ChainEpoch;
+
 use anyhow::anyhow;
-use fvm_shared::message::Message;
+use fvm_ipld_encoding::{de, from_slice, RawBytes};
+use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
+use fvm_shared::clock::ChainEpoch;
+use fvm_shared::econ::TokenAmount;
+use fvm_shared::message::Message;
+use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
+
 use crate::{ActorState, Bench, ExecutionResult};
 
 pub struct ExecutionWrangler<'a> {
     bench: &'a mut dyn Bench,
-    version: i64,
-    gas_limit: i64,
+    version: u64,
+    gas_limit: u64,
     gas_fee_cap: TokenAmount,
     gas_premium: TokenAmount,
     sequences: HashMap<Address, u64>,
@@ -23,8 +25,8 @@ pub struct ExecutionWrangler<'a> {
 impl<'a> ExecutionWrangler<'a> {
     pub fn new(
         bench: &'a mut dyn Bench,
-        version: i64,
-        gas_limit: i64,
+        version: u64,
+        gas_limit: u64,
         gas_fee_cap: TokenAmount,
         gas_premium: TokenAmount,
         compute_msg_length: bool,

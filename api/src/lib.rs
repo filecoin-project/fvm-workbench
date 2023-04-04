@@ -1,4 +1,3 @@
-use crate::trace::ExecutionTrace;
 use cid::Cid;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ser::Serialize;
@@ -9,9 +8,11 @@ use fvm_shared::message::Message;
 use fvm_shared::receipt::Receipt;
 use fvm_shared::ActorID;
 
+use crate::trace::ExecutionTrace;
+
+pub mod analysis;
 pub mod trace;
 pub mod wrangler;
-pub mod analysis;
 
 /// A factory for workbench instances.
 /// Built-in actors must be installed before the workbench can be created.
@@ -73,6 +74,7 @@ pub trait Bench {
 
 /// The result of a message execution.
 /// This duplicates a lot from an FVM-internal type, but is independent of VM.
+#[derive(Clone, Debug)]
 pub struct ExecutionResult {
     /// Message receipt for the transaction.
     pub receipt: Receipt,
@@ -82,7 +84,7 @@ pub struct ExecutionResult {
     pub miner_tip: TokenAmount,
 
     // Gas tracing
-    pub gas_burned: i64,
+    pub gas_burned: u64,
     pub base_fee_burn: TokenAmount,
     pub over_estimation_burn: TokenAmount,
 

@@ -11,10 +11,9 @@ use fvm_shared::crypto::signature::SignatureType;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::sector::{RegisteredPoStProof, StoragePower};
 use fvm_shared::{ActorID, METHOD_SEND};
-
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 
-use crate::util::*;
+use super::*;
 
 const ACCOUNT_SEED: u64 = 93837778;
 
@@ -92,6 +91,7 @@ pub fn create_miner(
     Ok((res.id_address.id().unwrap(), res.robust_address))
 }
 
+#[allow(dead_code)]
 pub fn verifreg_add_verifier(
     w: &mut ExecutionWrangler,
     verifier: ActorID,

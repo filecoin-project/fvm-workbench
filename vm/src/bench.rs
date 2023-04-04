@@ -10,9 +10,7 @@ use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
-use fvm_workbench_api::trace::ExecutionEvent::{
-    Call, CallAbort, CallError, CallReturn, GasCharge, Log,
-};
+use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
 use fvm_workbench_api::trace::ExecutionTrace;
 use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
 
@@ -66,7 +64,7 @@ where
         let raw = self
             .executor
             .state_tree()
-            .get_actor_id(id)
+            .get_actor(id)
             .map_err(|e| anyhow!("failed to load actor {}: {}", id, e.to_string()))?;
         Ok(raw.map(|a| ActorState {
             code: a.code,
@@ -106,16 +104,16 @@ fn trace_as_trace(fvm_trace: fvm::trace::ExecutionTrace) -> ExecutionTrace {
             ExecutionEvent::GasCharge(e) => events.push(GasCharge {
                 name: e.name,
                 compute_milli: e.compute_gas.as_milligas(),
-                storage_milli: e.storage_gas.as_milligas(),
+                other_milli: e.other_gas.as_milligas(),
             }),
             ExecutionEvent::Call { from, to, method, params, value } => {
                 events.push(Call { from, to, method, params, value })
             }
-            ExecutionEvent::CallReturn(return_value) => events.push(CallReturn { return_value }),
-            ExecutionEvent::CallAbort(exit_code) => events.push(CallAbort { exit_code }),
+            ExecutionEvent::CallReturn(exit_code, return_value) => {
+                events.push(CallReturn { exit_code, return_value })
+            }
             ExecutionEvent::CallError(e) => events.push(CallError { reason: e.0, errno: e.1 }),
-            ExecutionEvent::Log(msg) => events.push(Log { msg }),
-            _ => {} // Drop unexpected events silently
+            _ => todo!(),
         }
     }
     ExecutionTrace::new(events)

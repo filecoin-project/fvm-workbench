@@ -4,3 +4,5 @@ target
 
 # IDE project files
 .idea/
+.vscode/
+*.cargo/
