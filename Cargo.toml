@@ -13,14 +13,15 @@ license = "MIT OR Apache-2.0"
 authors = ["@anorth"]
 edition = "2021"
 
-#[patch.crates-io]
-#fvm = {git="https://github.com/filecoin-project/ref-fvm", rev="afce84086"}
-#fvm_ipld_hamt = {git="https://github.com/filecoin-project/ref-fvm", rev="afce84086"}
-#fvm_ipld_amt = {git="https://github.com/filecoin-project/ref-fvm", rev="afce84086"}
-#fvm_ipld_blockstore = {git="https://github.com/filecoin-project/ref-fvm", rev="afce84086"}
-#fvm_ipld_encoding = {git="https://github.com/filecoin-project/ref-fvm", rev="afce84086"}
-#fvm_shared = {git="https://github.com/filecoin-project/ref-fvm", rev="afce84086"}
-#fvm_sdk = {git="https://github.com/filecoin-project/ref-fvm", rev="afce84086"}
+# [patch.crates-io]
+# fvm = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+# fvm_ipld_hamt = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+# fvm_ipld_amt = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+# fvm_ipld_blockstore = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+# fvm_ipld_encoding = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+# fvm_shared = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+# fvm_sdk = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+
 ## Patches for local development
 #fvm = { path = "../../filecoin-project/ref-fvm-v2/fvm" }
 #fvm_ipld_hamt = { path = "../../filecoin-project/ref-fvm-v2/ipld/hamt"}

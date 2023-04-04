@@ -1141,7 +1141,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_account"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "fil_actors_runtime",
@@ -1177,7 +1177,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_cron"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1192,7 +1192,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_datacap"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "cid",
  "fil_actors_runtime",
@@ -1213,7 +1213,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_eam"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1235,7 +1235,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_ethaccount"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "fil_actors_runtime",
  "frc42_dispatch",
@@ -1251,7 +1251,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_evm"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1276,7 +1276,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_init"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1295,7 +1295,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_market"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1318,7 +1318,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_miner"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1343,7 +1343,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_multisig"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1364,7 +1364,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_paych"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1381,12 +1381,12 @@ dependencies = [
 [[package]]
 name = "fil_actor_placeholder"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 
 [[package]]
 name = "fil_actor_power"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1408,7 +1408,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_reward"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1424,7 +1424,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_system"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1440,7 +1440,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_verifreg"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "cid",
@@ -1462,7 +1462,7 @@ dependencies = [
 [[package]]
 name = "fil_actors_evm_shared"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_encoding",
@@ -1475,7 +1475,7 @@ dependencies = [
 [[package]]
 name = "fil_actors_runtime"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1506,7 +1506,7 @@ dependencies = [
 [[package]]
 name = "fil_builtin_actors_bundle"
 version = "10.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alex/update-deps#331102ce67c47b7ad33acf9ff32bde3f78e98d12"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=39571e2#39571e25eacd51326c9fc8e29d4b69943f15a3b1"
 dependencies = [
  "cid",
  "clap",
