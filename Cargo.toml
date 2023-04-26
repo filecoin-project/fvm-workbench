@@ -23,13 +23,14 @@ edition = "2021"
 # fvm_sdk = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
 
 ## Patches for local development
-#fvm = { path = "../../filecoin-project/ref-fvm-v2/fvm" }
-#fvm_ipld_hamt = { path = "../../filecoin-project/ref-fvm-v2/ipld/hamt"}
-#fvm_ipld_amt = { path = "../../filecoin-project/ref-fvm-v2/ipld/amt"}
-#fvm_ipld_blockstore = { path = "../../filecoin-project/ref-fvm-v2/ipld/blockstore" }
-#fvm_ipld_encoding = { path = "../../filecoin-project/ref-fvm-v2/ipld/encoding" }
-#fvm_shared = { path = "../../filecoin-project/ref-fvm-v2/shared" }
-#fvm_sdk = { path = "../../filecoin-project/ref-fvm-v2/sdk" }
+[patch.crates-io]
+fvm = { path = "../../filecoin-project/ref-fvm/fvm" }
+fvm_ipld_hamt = { path = "../../filecoin-project/ref-fvm/ipld/hamt"}
+fvm_ipld_amt = { path = "../../filecoin-project/ref-fvm/ipld/amt"}
+fvm_ipld_blockstore = { path = "../../filecoin-project/ref-fvm/ipld/blockstore" }
+fvm_ipld_encoding = { path = "../../filecoin-project/ref-fvm/ipld/encoding" }
+fvm_shared = { path = "../../filecoin-project/ref-fvm/shared" }
+fvm_sdk = { path = "../../filecoin-project/ref-fvm/sdk" }
 
 [patch.'https://github.com/filecoin-project/builtin-actors']
 ## Patches to profile/benchmark local changes to actor code.
