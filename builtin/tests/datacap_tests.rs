@@ -44,8 +44,8 @@ fn datacap_transfer_scenario() {
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
 
-    let mut bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(&mut *bench);
+    let bench = builder.build().unwrap();
+    let mut w = ExecutionWrangler::new_default(bench);
 
     let accts = create_accounts(
         &mut w,

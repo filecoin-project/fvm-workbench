@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
@@ -11,20 +12,20 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 
 use crate::{ActorState, Bench, ExecutionResult};
 
-pub struct ExecutionWrangler<'a> {
-    bench: &'a mut dyn Bench,
+pub struct ExecutionWrangler {
+    bench: RefCell<Box<dyn Bench>>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
     gas_premium: TokenAmount,
-    sequences: HashMap<Address, u64>,
+    sequences: RefCell<HashMap<Address, u64>>,
     msg_length: usize,
     compute_msg_length: bool,
 }
 
-impl<'a> ExecutionWrangler<'a> {
+impl ExecutionWrangler {
     pub fn new(
-        bench: &'a mut dyn Bench,
+        bench: Box<dyn Bench>,
         version: u64,
         gas_limit: u64,
         gas_fee_cap: TokenAmount,
@@ -32,18 +33,18 @@ impl<'a> ExecutionWrangler<'a> {
         compute_msg_length: bool,
     ) -> Self {
         Self {
-            bench,
+            bench: RefCell::new(bench),
             version,
             gas_limit,
             gas_fee_cap,
             gas_premium,
-            sequences: HashMap::new(),
+            sequences: RefCell::new(HashMap::new()),
             msg_length: 0,
             compute_msg_length,
         }
     }
 
-    pub fn new_default(bench: &'a mut dyn Bench) -> Self {
+    pub fn new_default(bench: Box<dyn Bench>) -> Self {
         Self::new(bench, 0, BLOCK_GAS_LIMIT, TokenAmount::zero(), TokenAmount::zero(), true)
     }
 
@@ -55,11 +56,11 @@ impl<'a> ExecutionWrangler<'a> {
         params: RawBytes,
         value: TokenAmount,
     ) -> anyhow::Result<ExecutionResult> {
-        let sequence = self.sequences.get(&from).unwrap_or(&0);
-        let (msg, msg_length) = self.make_msg(from, to, method, params, value, *sequence);
-        let ret = self.bench.execute(msg, msg_length);
+        let sequence = *self.sequences.borrow().get(&from).unwrap_or(&0);
+        let (msg, msg_length) = self.make_msg(from, to, method, params, value, sequence);
+        let ret = self.bench.borrow_mut().execute(msg, msg_length);
         if ret.is_ok() {
-            self.sequences.insert(from, sequence + 1);
+            self.sequences.borrow_mut().insert(from, sequence + 1);
         }
         ret
     }
@@ -72,32 +73,33 @@ impl<'a> ExecutionWrangler<'a> {
         params: RawBytes,
         value: TokenAmount,
     ) -> anyhow::Result<ExecutionResult> {
-        let sequence = self.sequences.get(&from).unwrap_or(&0);
-        let (msg, msg_length) = self.make_msg(from, to, method, params, value, *sequence);
-        let ret = self.bench.execute_implicit(msg, msg_length);
+        let sequence = *self.sequences.borrow().get(&from).unwrap_or(&0);
+        let (msg, msg_length) = self.make_msg(from, to, method, params, value, sequence);
+        let ret = self.bench.borrow_mut().execute_implicit(msg, msg_length);
         if ret.is_ok() {
-            self.sequences.insert(from, sequence + 1);
+            self.sequences.borrow_mut().insert(from, sequence + 1);
         }
         ret
     }
 
     pub fn epoch(&self) -> ChainEpoch {
-        self.bench.epoch()
+        self.bench.borrow().epoch()
     }
 
     pub fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
-        self.bench.find_actor(id)
+        self.bench.borrow().find_actor(id)
     }
 
     pub fn find_actor_state<T: de::DeserializeOwned>(
         &self,
         id: ActorID,
     ) -> anyhow::Result<Option<T>> {
-        let actor = self.bench.find_actor(id)?;
+        let actor = self.bench.borrow().find_actor(id)?;
         Ok(match actor {
             Some(actor) => {
                 let block = self
                     .bench
+                    .borrow()
                     .store()
                     .get(&actor.state)
                     .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
@@ -114,7 +116,7 @@ impl<'a> ExecutionWrangler<'a> {
     }
 
     pub fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
-        self.bench.resolve_address(addr)
+        self.bench.borrow().resolve_address(addr)
     }
 
     ///// Private helpers /////
