@@ -86,6 +86,10 @@ impl ExecutionWrangler {
         self.bench.borrow().epoch()
     }
 
+    pub fn set_epoch(&self, epoch: ChainEpoch) {
+        self.bench.borrow_mut().set_epoch(epoch);
+    }
+
     pub fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
         self.bench.borrow().find_actor(id)
     }

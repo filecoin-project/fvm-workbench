@@ -62,6 +62,8 @@ pub trait Bench {
 
     /// Returns the VM's current epoch.
     fn epoch(&self) -> ChainEpoch;
+    /// Replaces the VM in the workbench with a new set to the specified epoch
+    fn set_epoch(&mut self, epoch: ChainEpoch);
     /// Returns a reference to the VM's blockstore.
     fn store(&self) -> &dyn Blockstore;
     /// Looks up a top-level actor state object in the VM.
