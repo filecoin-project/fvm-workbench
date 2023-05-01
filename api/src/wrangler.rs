@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::{de, from_slice, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
@@ -13,7 +14,7 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use crate::{ActorState, Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
-    bench: RefCell<Box<dyn Bench>>,
+    pub bench: RefCell<Box<dyn Bench>>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
