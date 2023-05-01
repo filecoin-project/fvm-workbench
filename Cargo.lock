@@ -1065,7 +1065,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_account"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "fil_actors_runtime",
@@ -1101,7 +1100,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_cron"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1116,7 +1114,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_datacap"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "cid",
  "fil_actors_runtime",
@@ -1137,7 +1134,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_eam"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1159,7 +1155,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_ethaccount"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "fil_actors_runtime",
  "frc42_dispatch",
@@ -1175,7 +1170,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_evm"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1200,7 +1194,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_init"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1219,7 +1212,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_market"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1242,7 +1234,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_miner"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1267,7 +1258,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_multisig"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1288,7 +1278,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_paych"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1305,12 +1294,10 @@ dependencies = [
 [[package]]
 name = "fil_actor_placeholder"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 
 [[package]]
 name = "fil_actor_power"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1332,7 +1319,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_reward"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1348,7 +1334,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_system"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1364,7 +1349,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_verifreg"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "cid",
@@ -1386,7 +1370,6 @@ dependencies = [
 [[package]]
 name = "fil_actors_evm_shared"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_encoding",
@@ -1399,7 +1382,6 @@ dependencies = [
 [[package]]
 name = "fil_actors_runtime"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1430,7 +1412,6 @@ dependencies = [
 [[package]]
 name = "fil_builtin_actors_bundle"
 version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=c458d698104ef81b103e8ac3109334b808100ece#c458d698104ef81b103e8ac3109334b808100ece"
 dependencies = [
  "cid",
  "clap",
