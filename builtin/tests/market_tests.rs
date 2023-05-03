@@ -65,15 +65,14 @@ fn publish_storage_deals() {
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
 
-    let mut bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(&mut *bench);
+    let bench = builder.build().unwrap();
+    let mut w = ExecutionWrangler::new_default(bench);
 
     let (a, deal_start) = setup(&mut w, &genesis);
     let mut batcher =
         DealBatcher::new(a.maddr, PaddedPieceSize(1 << 30), false, deal_start, DEAL_LIFETIME);
 
-    let mut options = DealOptions::default();
-    options.verified = Some(true);
+    let options = DealOptions { verified: Some(true), ..Default::default() };
     batcher.stage(&a.verified_client, "deal0", options.clone());
     batcher.stage(&a.verified_client, "deal1", options.clone());
     batcher.stage(&a.verified_client, "deal2", options.clone());

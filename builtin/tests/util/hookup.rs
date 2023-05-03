@@ -27,9 +27,9 @@ fn test_hookup() {
 
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
-    let mut bench = builder.build().unwrap();
+    let bench = builder.build().unwrap();
 
-    let mut wrangler = ExecutionWrangler::new_default(&mut *bench);
+    let mut wrangler = ExecutionWrangler::new_default(bench);
     let result = wrangler
         .execute(
             genesis.faucet_address(),

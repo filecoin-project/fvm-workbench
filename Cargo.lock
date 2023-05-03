@@ -1886,6 +1886,7 @@ dependencies = [
  "fvm_ipld_hamt",
  "fvm_shared",
  "multihash",
+ "replace_with",
  "thiserror",
 ]
 

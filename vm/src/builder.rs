@@ -4,7 +4,6 @@ use futures::executor::block_on;
 use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::DefaultExecutor;
-use fvm::externs::Externs;
 use fvm::machine::{DefaultMachine, MachineContext, Manifest, NetworkConfig};
 use fvm::state_tree::{ActorState, StateTree};
 use fvm::DefaultKernel;
@@ -21,32 +20,31 @@ use fvm_workbench_api::{Bench, WorkbenchBuilder};
 use multihash::Code;
 
 use crate::bench::FvmBench;
+use crate::externs::FakeExterns;
 
 /// A factory for workbench instances backed by a real FVM.
 /// Code for built-in actors may be loaded from either a bundle or a manifest, before
 /// actors can then be constructed.
-pub struct FvmBenchBuilder<B, E>
+pub struct FvmBenchBuilder<B>
 where
     B: Blockstore + Clone + 'static,
-    E: Externs + Clone + 'static,
 {
-    externs: E,
+    externs: FakeExterns,
     machine_ctx: MachineContext,
     state_tree: StateTree<B>,
     builtin_manifest_data_cid: Option<Cid>,
     builtin_manifest: Option<Manifest>,
 }
 
-impl<B, E> FvmBenchBuilder<B, E>
+impl<B> FvmBenchBuilder<B>
 where
     B: Blockstore + Clone,
-    E: Externs + Clone,
 {
     /// Create a new BenchBuilder and loads built-in actor code from a bundle.
     /// Returns the builder and manifest data CID.
     pub fn new_with_bundle(
         blockstore: B,
-        externs: E,
+        externs: FakeExterns,
         nv: NetworkVersion,
         state_tree_version: StateTreeVersion,
         builtin_bundle: &[u8],
@@ -59,7 +57,7 @@ where
     /// Creates a new BenchBuilder with no installed code for built-in actors.
     pub fn new_bare(
         blockstore: B,
-        externs: E,
+        externs: FakeExterns,
         nv: NetworkVersion,
         state_tree_version: StateTreeVersion,
     ) -> anyhow::Result<Self> {
@@ -150,10 +148,9 @@ where
     }
 }
 
-impl<B, E> WorkbenchBuilder for FvmBenchBuilder<B, E>
+impl<B> WorkbenchBuilder for FvmBenchBuilder<B>
 where
     B: Blockstore + Clone,
-    E: Externs + Clone,
 {
     type B = B;
 
@@ -203,11 +200,9 @@ where
             self.state_tree.store().clone(),
             self.externs.clone(),
         )?;
-        let executor =
-            DefaultExecutor::<DefaultKernel<DefaultCallManager<DefaultMachine<B, E>>>>::new(
-                EnginePool::new_default(engine_conf)?,
-                machine,
-            )?;
+        let executor = DefaultExecutor::<
+            DefaultKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>,
+        >::new(EnginePool::new_default(engine_conf)?, machine)?;
         Ok(Box::new(FvmBench::new(executor)))
     }
 }
