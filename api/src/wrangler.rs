@@ -13,7 +13,7 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use crate::{ActorState, Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
-    bench: RefCell<Box<dyn Bench>>,
+    pub bench: RefCell<Box<dyn Bench>>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
