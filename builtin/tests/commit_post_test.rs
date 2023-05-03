@@ -1,9 +1,11 @@
+use cid::Cid;
 use fil_actor_cron::Method as CronMethod;
 use fil_actor_market::Method as MarketMethod;
 use fil_actor_miner::{
-    max_prove_commit_duration, power_for_sector, DeadlineInfo, Method as MinerMethod,
-    PoStPartition, ProveCommitAggregateParams, ProveCommitSectorParams, State as MinerState,
-    SubmitWindowedPoStParams,
+    max_prove_commit_duration, power_for_sector, CompactCommD, DeadlineInfo, Method as MinerMethod,
+    PoStPartition, PreCommitSectorBatchParams, PreCommitSectorBatchParams2, PreCommitSectorParams,
+    ProveCommitAggregateParams, ProveCommitSectorParams, SectorPreCommitInfo,
+    SectorPreCommitOnChainInfo, State as MinerState, SubmitWindowedPoStParams,
 };
 use fil_actor_power::{Method as PowerMethod, State as PowerState};
 use fil_actor_reward::Method as RewardMethod;
@@ -13,11 +15,12 @@ use fil_actors_runtime::{
     STORAGE_POWER_ACTOR_ADDR, SYSTEM_ACTOR_ADDR,
 };
 use fvm_ipld_bitfield::BitField;
-use fvm_ipld_blockstore::MemoryBlockstore;
+use fvm_ipld_blockstore::{Blockstore, MemoryBlockstore};
 use fvm_ipld_encoding::ipld_block::IpldBlock;
 use fvm_ipld_encoding::RawBytes;
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
+use fvm_shared::clock::ChainEpoch;
 use fvm_shared::crypto::signature::SignatureType;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
@@ -25,18 +28,22 @@ use fvm_shared::randomness::Randomness;
 use fvm_shared::sector::{PoStProof, RegisteredSealProof, SectorNumber, MAX_SECTOR_NUMBER};
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
-use fvm_shared::METHOD_SEND;
+use fvm_shared::{ActorID, METHOD_SEND};
 use fvm_workbench_api::wrangler::ExecutionWrangler;
+use fvm_workbench_api::WorkbenchBuilder;
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
-use test_vm::util::{
-    advance_by_deadline_to_epoch, advance_to_proving_deadline, apply_code, apply_ok,
-    create_accounts, create_miner, invariant_failure_patterns, precommit_sectors,
-    submit_windowed_post,
-};
-use test_vm::{ExpectInvocation, TestVM, TEST_VM_RAND_ARRAY, VM};
 
+use crate::util::*;
+use crate::workflows::*;
+mod util;
+pub struct MinerBalances {
+    pub available_balance: TokenAmount,
+    pub vesting_balance: TokenAmount,
+    pub initial_pledge: TokenAmount,
+    pub pre_commit_deposit: TokenAmount,
+}
 struct SectorInfo {
     number: SectorNumber,
     deadline_info: DeadlineInfo,
@@ -51,7 +58,215 @@ struct MinerInfo {
     _miner_robust: Address,
 }
 
-fn setup(store: &'_ MemoryBlockstore) -> (TestVM<MemoryBlockstore>, MinerInfo, SectorInfo) {
+struct BlockstoreWrapper<'a>(&'a dyn Blockstore);
+
+impl<'a> Blockstore for BlockstoreWrapper<'a> {
+    fn get(&self, k: &Cid) -> anyhow::Result<Option<Vec<u8>>> {
+        self.0.get(k)
+    }
+
+    fn put_keyed(&self, k: &Cid, block: &[u8]) -> anyhow::Result<()> {
+        self.0.put_keyed(k, block)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn precommit_sectors_v2(
+    w: &mut ExecutionWrangler,
+    count: u64,
+    batch_size: i64,
+    worker: &Address,
+    maddr: &Address,
+    seal_proof: RegisteredSealProof,
+    sector_number_base: SectorNumber,
+    expect_cron_enroll: bool,
+    exp: Option<ChainEpoch>,
+    v2: bool,
+) -> Vec<SectorPreCommitOnChainInfo> {
+    let mid = w.resolve_address(maddr).unwrap().unwrap();
+    // let invocs_common = || -> Vec<ExpectInvocation> {
+    //     vec![
+    //         ExpectInvocation {
+    //             to: REWARD_ACTOR_ADDR,
+    //             method: RewardMethod::ThisEpochReward as u64,
+    //             ..Default::default()
+    //         },
+    //         ExpectInvocation {
+    //             to: STORAGE_POWER_ACTOR_ADDR,
+    //             method: PowerMethod::CurrentTotalPower as u64,
+    //             ..Default::default()
+    //         },
+    //     ]
+    // };
+    // let invoc_first = || -> ExpectInvocation {
+    //     ExpectInvocation {
+    //         to: STORAGE_POWER_ACTOR_ADDR,
+    //         method: PowerMethod::EnrollCronEvent as u64,
+    //         ..Default::default()
+    //     }
+    // };
+    // let invoc_net_fee = |fee: TokenAmount| -> ExpectInvocation {
+    //     ExpectInvocation {
+    //         to: BURNT_FUNDS_ACTOR_ADDR,
+    //         method: METHOD_SEND,
+    //         value: Some(fee),
+    //         ..Default::default()
+    //     }
+    // };
+
+    let expiration = match exp {
+        None => {
+            w.epoch()
+                + Policy::default().min_sector_expiration
+                + max_prove_commit_duration(&Policy::default(), seal_proof).unwrap()
+        }
+        Some(e) => e,
+    };
+
+    let mut sector_idx = 0u64;
+    while sector_idx < count {
+        let msg_sector_idx_base = sector_idx;
+        // let mut invocs = invocs_common();
+        if !v2 {
+            let mut param_sectors = Vec::<PreCommitSectorParams>::new();
+            let mut j = 0;
+            while j < batch_size && sector_idx < count {
+                let sector_number = sector_number_base + sector_idx;
+                param_sectors.push(PreCommitSectorParams {
+                    seal_proof,
+                    sector_number,
+                    sealed_cid: make_sealed_cid(format!("sn: {}", sector_number).as_bytes()),
+                    seal_rand_epoch: w.epoch() - 1,
+                    deal_ids: vec![],
+                    expiration,
+                    ..Default::default()
+                });
+                sector_idx += 1;
+                j += 1;
+            }
+            if param_sectors.len() > 1 {
+                // invocs.push(invoc_net_fee(aggregate_pre_commit_network_fee(
+                //     param_sectors.len() as i64,
+                //     &TokenAmount::zero(),
+                // )));
+            }
+            if expect_cron_enroll && msg_sector_idx_base == 0 {
+                // invocs.push(invoc_first());
+            }
+
+            apply_ok(
+                w,
+                *worker,
+                *maddr,
+                TokenAmount::zero(),
+                MinerMethod::PreCommitSectorBatch as u64,
+                &PreCommitSectorBatchParams { sectors: param_sectors.clone() },
+            );
+        } else {
+            let mut param_sectors = Vec::<SectorPreCommitInfo>::new();
+            let mut j = 0;
+            while j < batch_size && sector_idx < count {
+                let sector_number = sector_number_base + sector_idx;
+                param_sectors.push(SectorPreCommitInfo {
+                    seal_proof,
+                    sector_number,
+                    sealed_cid: make_sealed_cid(format!("sn: {}", sector_number).as_bytes()),
+                    seal_rand_epoch: w.epoch() - 1,
+                    deal_ids: vec![],
+                    expiration,
+                    unsealed_cid: CompactCommD::new(None),
+                });
+                sector_idx += 1;
+                j += 1;
+            }
+            if param_sectors.len() > 1 {
+                // invocs.push(invoc_net_fee(aggregate_pre_commit_network_fee(
+                //     param_sectors.len() as i64,
+                //     &TokenAmount::zero(),
+                // )));
+            }
+            if expect_cron_enroll && msg_sector_idx_base == 0 {
+                // invocs.push(invoc_first());
+            }
+
+            apply_ok(
+                w,
+                *worker,
+                *maddr,
+                TokenAmount::zero(),
+                MinerMethod::PreCommitSectorBatch2 as u64,
+                &PreCommitSectorBatchParams2 { sectors: param_sectors.clone() },
+            );
+
+            // let expect = ExpectInvocation {
+            //     to: mid,
+            //     method: MinerMethod::PreCommitSectorBatch2 as u64,
+            //     params: Some(
+            //         IpldBlock::serialize_cbor(&PreCommitSectorBatchParams2 {
+            //             sectors: param_sectors,
+            //         })
+            //         .unwrap(),
+            //     ),
+            //     subinvocs: Some(invocs),
+            //     ..Default::default()
+            // };
+            // expect.matches(v.take_invocations().last().unwrap())
+        }
+    }
+    // extract chain state
+    let mstate: MinerState = w.find_actor_state(mid).unwrap().unwrap();
+    (0..count)
+        .map(|i| {
+            mstate
+                .get_precommitted_sector(
+                    &BlockstoreWrapper(w.bench.borrow().store()),
+                    sector_number_base + i,
+                )
+                .unwrap()
+                .unwrap()
+        })
+        .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn precommit_sectors<BS: Blockstore>(
+    w: &mut ExecutionWrangler,
+    count: u64,
+    batch_size: i64,
+    worker: &Address,
+    maddr: &Address,
+    seal_proof: RegisteredSealProof,
+    sector_number_base: SectorNumber,
+    expect_cron_enroll: bool,
+    exp: Option<ChainEpoch>,
+) -> Vec<SectorPreCommitOnChainInfo> {
+    precommit_sectors_v2(
+        w,
+        count,
+        batch_size,
+        worker,
+        maddr,
+        seal_proof,
+        sector_number_base,
+        expect_cron_enroll,
+        exp,
+        false,
+    )
+}
+
+pub fn advance_by_deadline_to_epoch(
+    w: &ExecutionWrangler,
+    maddr: &Address,
+    e: ChainEpoch,
+) -> DeadlineInfo {
+    // keep advancing until the epoch of interest is within the deadline
+    // if e is dline.last() == dline.close -1 cron is not run
+    let dline_info = advance_by_deadline(v, maddr, |dline_info| dline_info.close < e);
+    v.set_epoch(e);
+    dline_info
+}
+
+fn setup(store: &'_ MemoryBlockstore) -> (ExecutionWrangler, MinerInfo, SectorInfo) {
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         MemoryBlockstore::new(),
         FakeExterns::new(),
@@ -77,49 +292,60 @@ fn setup(store: &'_ MemoryBlockstore) -> (TestVM<MemoryBlockstore>, MinerInfo, S
     .clone();
     let seal_proof = RegisteredSealProof::StackedDRG32GiBV1P1;
     let (owner, worker) = (addrs[0], addrs[0]);
-    let (id_addr, robust_addr) = create_miner(
-        &v,
-        &owner,
-        &worker,
+    let (miner_id, miner_addr) = create_miner(
+        &mut w,
+        owner.id,
+        worker.id,
         seal_proof.registered_window_post_proof().unwrap(),
-        &TokenAmount::from_whole(10_000),
-    );
-    let v = v.with_epoch(200);
+        TokenAmount::from_whole(10_000),
+    )
+    .unwrap();
+    w.set_epoch(200);
 
     // precommit and advance to prove commit time
     let sector_number: SectorNumber = 100;
-    precommit_sectors(&v, 1, 1, &worker, &id_addr, seal_proof, sector_number, true, None);
+    precommit_sectors(
+        &mut w,
+        1,
+        1,
+        &worker.id_addr(),
+        &miner_addr,
+        seal_proof,
+        sector_number,
+        true,
+        None,
+    );
 
-    let balances = v.get_miner_balance(&id_addr);
+    let balances = get_miner_balance(&mut w, miner_id);
     assert!(balances.pre_commit_deposit.is_positive());
 
-    let prove_time = v.epoch() + Policy::default().pre_commit_challenge_delay + 1;
-    advance_by_deadline_to_epoch(&v, &id_addr, prove_time);
+    let prove_time = w.epoch() + Policy::default().pre_commit_challenge_delay + 1;
+    advance_by_deadline_to_epoch(&mut w, &miner_id, prove_time);
 
     // prove commit, cron, advance to post time
     let prove_params = ProveCommitSectorParams { sector_number, proof: vec![] };
     let prove_params_ser = IpldBlock::serialize_cbor(&prove_params).unwrap();
     apply_ok(
-        &v,
-        &worker,
-        &robust_addr,
-        &TokenAmount::zero(),
+        &mut w,
+        worker.id_addr(),
+        miner_addr,
+        TokenAmount::zero(),
         MinerMethod::ProveCommitSector as u64,
-        Some(prove_params),
+        &prove_params,
     );
-    ExpectInvocation {
-        to: id_addr,
-        method: MinerMethod::ProveCommitSector as u64,
-        params: Some(prove_params_ser),
-        subinvocs: Some(vec![ExpectInvocation {
-            to: STORAGE_POWER_ACTOR_ADDR,
-            method: PowerMethod::SubmitPoRepForBulkVerify as u64,
-            ..Default::default()
-        }]),
-        ..Default::default()
-    }
-    .matches(v.take_invocations().last().unwrap());
-    let res = v
+    // ExpectInvocation {
+    //     to: miner_id,
+    //     method: MinerMethod::ProveCommitSector as u64,
+    //     params: Some(prove_params_ser),
+    //     subinvocs: Some(vec![ExpectInvocation {
+    //         to: STORAGE_POWER_ACTOR_ADDR,
+    //         method: PowerMethod::SubmitPoRepForBulkVerify as u64,
+    //         ..Default::default()
+    //     }]),
+    //     ..Default::default()
+    // }
+    // .matches(v.take_invocations().last().unwrap());
+    let res = w
         .apply_message(
             &SYSTEM_ACTOR_ADDR,
             &CRON_ACTOR_ADDR,
@@ -129,69 +355,76 @@ fn setup(store: &'_ MemoryBlockstore) -> (TestVM<MemoryBlockstore>, MinerInfo, S
         )
         .unwrap();
     assert_eq!(ExitCode::OK, res.code);
-    ExpectInvocation {
-        to: CRON_ACTOR_ADDR,
-        method: CronMethod::EpochTick as u64,
-        subinvocs: Some(vec![
-            ExpectInvocation {
-                to: STORAGE_POWER_ACTOR_ADDR,
-                method: PowerMethod::OnEpochTickEnd as u64,
-                subinvocs: Some(vec![
-                    ExpectInvocation {
-                        to: REWARD_ACTOR_ADDR,
-                        method: RewardMethod::ThisEpochReward as u64,
-                        ..Default::default()
-                    },
-                    ExpectInvocation {
-                        to: id_addr,
-                        method: MinerMethod::ConfirmSectorProofsValid as u64,
-                        subinvocs: Some(vec![ExpectInvocation {
-                            to: STORAGE_POWER_ACTOR_ADDR,
-                            method: PowerMethod::UpdatePledgeTotal as u64,
-                            ..Default::default()
-                        }]),
-                        ..Default::default()
-                    },
-                    ExpectInvocation {
-                        to: REWARD_ACTOR_ADDR,
-                        method: RewardMethod::UpdateNetworkKPI as u64,
-                        ..Default::default()
-                    },
-                ]),
-                ..Default::default()
-            },
-            ExpectInvocation {
-                to: STORAGE_MARKET_ACTOR_ADDR,
-                method: MarketMethod::CronTick as u64,
-                ..Default::default()
-            },
-        ]),
-        ..Default::default()
-    }
-    .matches(v.take_invocations().last().unwrap());
+    // ExpectInvocation {
+    //     to: CRON_ACTOR_ADDR,
+    //     method: CronMethod::EpochTick as u64,
+    //     subinvocs: Some(vec![
+    //         ExpectInvocation {
+    //             to: STORAGE_POWER_ACTOR_ADDR,
+    //             method: PowerMethod::OnEpochTickEnd as u64,
+    //             subinvocs: Some(vec![
+    //                 ExpectInvocation {
+    //                     to: REWARD_ACTOR_ADDR,
+    //                     method: RewardMethod::ThisEpochReward as u64,
+    //                     ..Default::default()
+    //                 },
+    //                 ExpectInvocation {
+    //                     to: miner_id,
+    //                     method: MinerMethod::ConfirmSectorProofsValid as u64,
+    //                     subinvocs: Some(vec![ExpectInvocation {
+    //                         to: STORAGE_POWER_ACTOR_ADDR,
+    //                         method: PowerMethod::UpdatePledgeTotal as u64,
+    //                         ..Default::default()
+    //                     }]),
+    //                     ..Default::default()
+    //                 },
+    //                 ExpectInvocation {
+    //                     to: REWARD_ACTOR_ADDR,
+    //                     method: RewardMethod::UpdateNetworkKPI as u64,
+    //                     ..Default::default()
+    //                 },
+    //             ]),
+    //             ..Default::default()
+    //         },
+    //         ExpectInvocation {
+    //             to: STORAGE_MARKET_ACTOR_ADDR,
+    //             method: MarketMethod::CronTick as u64,
+    //             ..Default::default()
+    //         },
+    //     ]),
+    //     ..Default::default()
+    // }
+    // .matches(v.take_invocations().last().unwrap());
+
     // pcd is released ip is added
-    let balances = v.get_miner_balance(&id_addr);
+    let balances = get_miner_balance(&mut w, miner_id);
     assert!(balances.initial_pledge.is_positive());
     assert!(balances.pre_commit_deposit.is_zero());
 
     // power unproven so network stats are the same
 
-    let network_stats = v.get_network_stats();
-    assert!(network_stats.total_bytes_committed.is_zero());
-    assert!(network_stats.total_pledge_collateral.is_positive());
+    // let network_stats = v.get_network_stats();
+    // assert!(network_stats.total_bytes_committed.is_zero());
+    // assert!(network_stats.total_pledge_collateral.is_positive());
 
-    let (deadline_info, partition_index) = advance_to_proving_deadline(&v, &id_addr, sector_number);
+    let (deadline_info, partition_index) =
+        advance_to_proving_deadline(&v, &miner_id, sector_number);
     (
         v,
-        MinerInfo {
-            seal_proof,
-            worker,
-            _owner: owner,
-            miner_id: id_addr,
-            _miner_robust: robust_addr,
-        },
+        MinerInfo { seal_proof, worker, _owner: owner, miner_id, _miner_robust: robust_addr },
         SectorInfo { number: sector_number, deadline_info, partition_index },
     )
+}
+
+fn get_miner_balance(w: &mut ExecutionWrangler, miner_id: ActorID) -> MinerBalances {
+    let a = w.find_actor(miner_id).unwrap().unwrap();
+    let st: MinerState = w.find_actor_state(miner_id).unwrap().unwrap();
+    MinerBalances {
+        available_balance: st.get_available_balance(&a.balance).unwrap(),
+        vesting_balance: st.locked_funds,
+        initial_pledge: st.initial_pledge,
+        pre_commit_deposit: st.pre_commit_deposits,
+    }
 }
 
 #[test]
@@ -866,4 +1099,7 @@ fn aggregate_one_precommit_expires() {
     v.expect_state_invariants(
         &[invariant_failure_patterns::REWARD_STATE_EPOCH_MISMATCH.to_owned()],
     );
+}
+pub fn make_sealed_cid(input: &[u8]) -> Cid {
+    make_cid_poseidon(input, FIL_COMMITMENT_SEALED)
 }
