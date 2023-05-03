@@ -88,6 +88,17 @@ where
             let mut machine_ctx = machine.context().clone();
             machine_ctx.epoch = epoch;
             machine_ctx.initial_state_root = machine.flush().unwrap();
+
+            // TODO: there is currently no way to get the externs out of the machine.
+            // Machine::externs(&self) does exist but since the above line machine.into_store() takes ownership of the
+            // machine we cannot borrow it again.
+            //
+            // Alternatives here that would allow us to keep the generic flexibility over externs
+            //
+            // - add a function to Machine to allow a single function that takes ownership and returns a tuple of blockstore, externs
+            // - add a function to Machine that allows explicit mutation of the MachineContext. Though this seems like a bit of an anti-pattern. My understanding is that the Machine shouldn't really mutate but rather new machines should be instantiated per epoch. But maybe this is ok.
+            // - have FakeExterns implement Clone and then clone the externs out of the machine before taking ownership of the machine
+            // - have FakeExterns be an indirection to user-provided functionality
             let machine = DefaultMachine::new(
                 &machine_ctx,
                 machine.into_store().into_inner(),
