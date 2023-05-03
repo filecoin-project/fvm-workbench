@@ -130,7 +130,7 @@ fn setup(w: &mut ExecutionWrangler, genesis: &GenesisResult) -> (Addrs, ChainEpo
     );
     let add_client_params = AddVerifiedClientParams {
         address: verified_client.id_addr(),
-        allowance: StoragePower::from((1000_u64 << 30) as u64),
+        allowance: StoragePower::from(1000_u64 << 30),
     };
     apply_ok(
         w,

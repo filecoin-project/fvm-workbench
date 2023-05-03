@@ -1,7 +1,10 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use anyhow::anyhow;
+use cid::Cid;
+use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::{de, from_slice, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
@@ -123,7 +126,6 @@ impl<'b> ExecutionWrangler<'b> {
     }
 
     ///// Private helpers /////
-
     fn make_msg(
         &self,
         from: Address,
@@ -151,5 +153,19 @@ impl<'b> ExecutionWrangler<'b> {
             0 // FIXME serialize and size
         };
         (msg, msg_length)
+    }
+}
+
+/// A BlockstoreWrapper is used to make the blockstore trait object consumable by functions that
+/// accept a generic BS: Blockstore parameter rather than a dyn Blockstore
+pub struct BlockstoreWrapper(Rc<RefCell<Box<dyn Bench>>>);
+
+impl Blockstore for BlockstoreWrapper {
+    fn get(&self, k: &Cid) -> anyhow::Result<Option<Vec<u8>>> {
+        self.0.borrow().store().get(k)
+    }
+
+    fn put_keyed(&self, k: &Cid, block: &[u8]) -> anyhow::Result<()> {
+        self.0.borrow().store().put_keyed(k, block)
     }
 }
