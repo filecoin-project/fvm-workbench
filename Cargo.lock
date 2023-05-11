@@ -947,6 +947,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
+name = "env_logger"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
+dependencies = [
+ "atty",
+ "humantime",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
 name = "errno"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1064,8 +1077,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_account"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "fil_actors_runtime",
@@ -1100,8 +1112,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_cron"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1115,8 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_datacap"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "cid",
  "fil_actors_runtime",
@@ -1136,8 +1146,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_eam"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1158,8 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_ethaccount"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "fil_actors_runtime",
  "frc42_dispatch",
@@ -1174,8 +1182,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_evm"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1199,8 +1206,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_init"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1218,8 +1224,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_market"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1241,8 +1246,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_miner"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1266,8 +1270,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_multisig"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1287,8 +1290,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_paych"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1304,13 +1306,11 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_placeholder"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 
 [[package]]
 name = "fil_actor_power"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1331,8 +1331,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_reward"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1347,8 +1346,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_system"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1363,8 +1361,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actor_verifreg"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "cid",
@@ -1385,8 +1382,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actors_evm_shared"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_encoding",
@@ -1398,8 +1394,7 @@ dependencies = [
 
 [[package]]
 name = "fil_actors_runtime"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1429,8 +1424,7 @@ dependencies = [
 
 [[package]]
 name = "fil_builtin_actors_bundle"
-version = "11.0.0-alpha.1"
-source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/benchmark-pca#715273cd6dfc7691bc422fdee836391107f17ac0"
+version = "12.0.0"
 dependencies = [
  "cid",
  "clap",
@@ -1840,6 +1834,7 @@ dependencies = [
  "blake2b_simd",
  "bls-signatures",
  "cid",
+ "env_logger",
  "fil_actor_account",
  "fil_actor_cron",
  "fil_actor_datacap",
@@ -1866,6 +1861,7 @@ dependencies = [
  "fvm_ipld_hamt",
  "fvm_shared",
  "libsecp256k1",
+ "log",
  "multihash",
  "rand_chacha",
  "thiserror",
@@ -2215,6 +2211,12 @@ dependencies = [
  "generic-array",
  "hmac",
 ]
+
+[[package]]
+name = "humantime"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "idna"

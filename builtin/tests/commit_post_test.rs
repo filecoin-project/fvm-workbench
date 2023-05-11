@@ -19,9 +19,11 @@ use fvm_shared::randomness::Randomness;
 use fvm_shared::sector::{PoStProof, RegisteredPoStProof, RegisteredSealProof, SectorNumber};
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
+use fvm_shared::ActorID;
 use fvm_workbench_api::analysis::TraceAnalysis;
+use fvm_workbench_api::blockstore::BlockstoreWrapper;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::WorkbenchBuilder;
+use fvm_workbench_api::{Bench, WorkbenchBuilder};
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
@@ -31,31 +33,19 @@ use crate::workflows::*;
 mod util;
 
 /// Precommits a sector, then submits a proof for it, then runs cron till the proof is verified
-fn setup() -> (ExecutionWrangler, MinerInfo, SectorInfo) {
-    let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
-        MemoryBlockstore::new(),
-        FakeExterns::new(),
-        NetworkVersion::V18,
-        StateTreeVersion::V5,
-        actors_v11::BUNDLE_CAR,
-    )
-    .unwrap();
-    let spec = GenesisSpec::default(manifest_data_cid);
-    let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
-    let bench = builder.build().unwrap();
+fn setup(
+    bench: &'_ mut dyn Bench,
+    faucet_id: ActorID,
+) -> (ExecutionWrangler<'_>, MinerInfo, SectorInfo) {
     let mut w = ExecutionWrangler::new_default(bench);
 
     // create an owner account
-    let addrs = create_accounts(
-        &mut w,
-        genesis.faucet_id,
-        1,
-        TokenAmount::from_whole(10_000),
-        SignatureType::BLS,
-    )
-    .unwrap();
-    let seal_proof = RegisteredSealProof::StackedDRG32GiBV1P1;
+    let addrs =
+        create_accounts(&mut w, faucet_id, 1, TokenAmount::from_whole(10_000), SignatureType::BLS)
+            .unwrap();
+
     let (owner, worker) = (addrs[0].clone(), addrs[0].clone());
+    let seal_proof = RegisteredSealProof::StackedDRG32GiBV1P1;
     let (miner_id, miner_addr) = create_miner(
         &mut w,
         owner.id,
@@ -112,6 +102,9 @@ fn setup() -> (ExecutionWrangler, MinerInfo, SectorInfo) {
         )
         .unwrap();
     assert_eq!(ExitCode::OK, res.receipt.exit_code);
+
+    let analysis = TraceAnalysis::build(res.trace);
+    println!("{}", analysis.format_spans());
 
     // pcd is released ip is added
     let balances = get_miner_balance(&mut w, miner_id);
@@ -171,18 +164,30 @@ pub fn submit_windowed_post(
     )
     .unwrap();
 
-    println!("{}", result.trace.format());
+    // println!("{}", result.trace.format());
     let analysis = TraceAnalysis::build(result.trace);
     println!("{}", analysis.format_spans());
 }
 
 #[test]
 fn submit_post_succeeds() {
-    let (mut w, miner_info, sector_info) = setup();
+    let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
+        MemoryBlockstore::new(),
+        FakeExterns::new(),
+        NetworkVersion::V18,
+        StateTreeVersion::V5,
+        actors_v11::BUNDLE_CAR,
+    )
+    .unwrap();
+    let spec = GenesisSpec::default(manifest_data_cid);
+    let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
+    let mut bench = builder.build().unwrap();
+    let (mut w, miner_info, sector_info) = setup(&mut *bench, genesis.faucet_id);
 
     // submit post
     let st = w.find_actor_state::<MinerState>(miner_info.miner_id.id().unwrap()).unwrap().unwrap();
-    let sector = st.get_sector(&w.blockstore_wrapper(), sector_info.number).unwrap().unwrap();
+    let sector =
+        st.get_sector(&BlockstoreWrapper::new(w.store()), sector_info.number).unwrap().unwrap();
     let sector_power = power_for_sector(miner_info.seal_proof.sector_size().unwrap(), &sector);
     submit_windowed_post(
         &mut w,

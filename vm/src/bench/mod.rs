@@ -1,10 +1,10 @@
 use anyhow::anyhow;
+
 use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
 use fvm::machine::{DefaultMachine, Machine};
 use fvm::trace::ExecutionEvent;
-use fvm::DefaultKernel;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
@@ -16,6 +16,10 @@ use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
 
 use crate::externs::FakeExterns;
 
+pub use self::kernel::BenchKernel;
+
+pub mod kernel;
+
 /// A workbench instance backed by a real FVM.
 pub struct FvmBench<B>
 where
@@ -25,7 +29,7 @@ where
 }
 
 type BenchExecutor<B> =
-    DefaultExecutor<DefaultKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>;
+    DefaultExecutor<BenchKernel<B, DefaultCallManager<DefaultMachine<B, FakeExterns>>>>;
 
 impl<B> FvmBench<B>
 where
@@ -106,10 +110,12 @@ where
             )
             .unwrap();
 
-            DefaultExecutor::<DefaultKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>::new(
-                EnginePool::new_default(engine_conf).unwrap(),
-                machine,
-            )
+            DefaultExecutor::<
+                BenchKernel<
+                    B,
+                     DefaultCallManager<DefaultMachine<B, FakeExterns>>,
+                >,
+            >::new(EnginePool::new_default(engine_conf).unwrap(), machine)
             .unwrap()
         });
     }

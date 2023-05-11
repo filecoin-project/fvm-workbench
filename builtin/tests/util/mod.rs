@@ -20,6 +20,7 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
 use fvm_shared::sector::{RegisteredSealProof, SectorNumber};
 use fvm_shared::{ActorID, MethodNum};
+use fvm_workbench_api::blockstore::BlockstoreWrapper;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::ExecutionResult;
 use multihash::derive::Multihash;
@@ -230,7 +231,7 @@ pub fn make_cid_poseidon(input: &[u8], prefix: u64) -> Cid {
 pub fn sector_deadline(w: &mut ExecutionWrangler, m: &Address, s: SectorNumber) -> (u64, u64) {
     let m = w.resolve_address(m).unwrap().unwrap();
     let st: MinerState = w.find_actor_state(m).unwrap().unwrap();
-    st.find_sector(&Policy::default(), &w.blockstore_wrapper(), s).unwrap()
+    st.find_sector(&Policy::default(), &BlockstoreWrapper::new(w.store()), s).unwrap()
 }
 
 pub fn miner_dline_info(w: &mut ExecutionWrangler, maddr: &Address) -> DeadlineInfo {

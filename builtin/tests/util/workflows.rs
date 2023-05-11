@@ -259,7 +259,7 @@ pub fn precommit_sectors_v2(
     (0..count)
         .map(|i| {
             mstate
-                .get_precommitted_sector(&w.blockstore_wrapper(), sector_number_base + i)
+                .get_precommitted_sector(&BlockstoreWrapper::new(w.store()), sector_number_base + i)
                 .unwrap()
                 .unwrap()
         })
