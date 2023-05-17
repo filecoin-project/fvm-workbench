@@ -38,7 +38,7 @@ fn datacap_transfer_scenario() {
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
-        actors_v11::BUNDLE_CAR,
+        actors_v12::BUNDLE_CAR,
     )
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);
