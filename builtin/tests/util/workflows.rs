@@ -1,20 +1,30 @@
 use fil_actor_cron::Method as CronMethod;
-use fil_actor_miner::{DeadlineInfo, SectorPreCommitOnChainInfo};
+use fil_actor_market::{Method as MarketMethod, SectorDeals};
+use fil_actor_miner::{
+    DeadlineInfo, PoStPartition, PowerPair, SectorPreCommitOnChainInfo, SubmitWindowedPoStParams,
+};
 use fil_actor_multisig::{Method as MultisigMethod, ProposeParams};
 use fil_actor_power::{CreateMinerParams, CreateMinerReturn};
 use fil_actor_verifreg::{AddVerifiedClientParams, Method as VerifregMethod, VerifierParams};
 use fil_actors_runtime::builtin::singletons::STORAGE_POWER_ACTOR_ADDR;
 use fil_actors_runtime::util::cbor::serialize;
-use fil_actors_runtime::{CRON_ACTOR_ADDR, SYSTEM_ACTOR_ADDR, VERIFIED_REGISTRY_ACTOR_ADDR};
+use fil_actors_runtime::{
+    CRON_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ADDR, SYSTEM_ACTOR_ADDR, VERIFIED_REGISTRY_ACTOR_ADDR,
+};
 use fvm_ipld_encoding::{BytesDe, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::crypto::signature::SignatureType;
 use fvm_shared::econ::TokenAmount;
-use fvm_shared::sector::{RegisteredPoStProof, RegisteredSealProof, SectorNumber, StoragePower};
+use fvm_shared::randomness::Randomness;
+use fvm_shared::sector::{
+    PoStProof, RegisteredPoStProof, RegisteredSealProof, SectorNumber, StoragePower,
+};
 use fvm_shared::{ActorID, METHOD_SEND};
+use fvm_workbench_api::wrangler::ExecutionResult;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
+use fvm_workbench_vm::bench::kernel::TEST_VM_RAND_ARRAY;
 
 use super::*;
 
@@ -60,6 +70,23 @@ pub fn create_accounts_seeded(
     let accounts =
         keys.into_iter().enumerate().map(|(i, key)| Account { id: ids[i], key }).collect();
     Ok(accounts)
+}
+
+pub fn market_add_balance(
+    w: &mut ExecutionWrangler,
+    sender: &Address,
+    beneficiary: &Address,
+    amount: &TokenAmount,
+) {
+    apply_ok(
+        w,
+        *sender,
+        STORAGE_MARKET_ACTOR_ADDR,
+        amount.clone(),
+        MarketMethod::AddBalance as u64,
+        beneficiary,
+    )
+    .unwrap();
 }
 
 pub fn create_miner(
@@ -138,8 +165,8 @@ pub fn verifreg_add_client(
 #[allow(clippy::too_many_arguments)]
 pub fn precommit_sectors(
     w: &mut ExecutionWrangler,
-    count: u64,
-    batch_size: i64,
+    count: usize,
+    batch_size: usize,
     worker: &Address,
     maddr: &Address,
     seal_proof: RegisteredSealProof,
@@ -151,6 +178,7 @@ pub fn precommit_sectors(
         w,
         count,
         batch_size,
+        vec![], // no deals
         worker,
         maddr,
         seal_proof,
@@ -164,8 +192,9 @@ pub fn precommit_sectors(
 #[allow(clippy::too_many_arguments)]
 pub fn precommit_sectors_v2(
     w: &mut ExecutionWrangler,
-    count: u64,
-    batch_size: i64,
+    count: usize,
+    batch_size: usize,
+    metadata: Vec<PrecommitMetadata>,
     worker: &Address,
     maddr: &Address,
     seal_proof: RegisteredSealProof,
@@ -185,25 +214,36 @@ pub fn precommit_sectors_v2(
         Some(e) => e,
     };
 
-    let mut sector_idx = 0u64;
+    let mut sector_idx: usize = 0;
+    let no_deals = PrecommitMetadata { deals: vec![], commd: CompactCommD::default() };
+    let mut sectors_with_deals: Vec<SectorDeals> = vec![];
     while sector_idx < count {
         if !v2 {
             let mut param_sectors = Vec::<PreCommitSectorParams>::new();
             let mut j = 0;
             while j < batch_size && sector_idx < count {
-                let sector_number = sector_number_base + sector_idx;
+                let sector_number = sector_number_base + sector_idx as u64;
+                let sector_meta = metadata.get(sector_idx).unwrap();
                 param_sectors.push(PreCommitSectorParams {
                     seal_proof,
                     sector_number,
                     sealed_cid: make_sealed_cid(format!("sn: {}", sector_number).as_bytes()),
                     seal_rand_epoch: w.epoch() - 1,
-                    deal_ids: vec![],
+                    deal_ids: sector_meta.deals.clone().clone(),
                     expiration,
                     ..Default::default()
                 });
+                if !sector_meta.deals.is_empty() {
+                    sectors_with_deals.push(SectorDeals {
+                        sector_type: seal_proof,
+                        sector_expiry: expiration,
+                        deal_ids: sector_meta.deals.clone(),
+                    });
+                }
                 sector_idx += 1;
                 j += 1;
             }
+
             let res = apply_ok(
                 w,
                 *worker,
@@ -223,16 +263,24 @@ pub fn precommit_sectors_v2(
             let mut param_sectors = Vec::<SectorPreCommitInfo>::new();
             let mut j = 0;
             while j < batch_size && sector_idx < count {
-                let sector_number = sector_number_base + sector_idx;
+                let sector_number = sector_number_base + sector_idx as u64;
+                let sector_meta = metadata.get(sector_idx).unwrap_or(&no_deals);
                 param_sectors.push(SectorPreCommitInfo {
                     seal_proof,
                     sector_number,
                     sealed_cid: make_sealed_cid(format!("sn: {}", sector_number).as_bytes()),
                     seal_rand_epoch: w.epoch() - 1,
-                    deal_ids: vec![],
+                    deal_ids: sector_meta.deals.clone(),
                     expiration,
-                    unsealed_cid: CompactCommD::new(None),
+                    unsealed_cid: sector_meta.commd.clone(),
                 });
+                if !sector_meta.deals.is_empty() {
+                    sectors_with_deals.push(SectorDeals {
+                        sector_type: seal_proof,
+                        sector_expiry: expiration,
+                        deal_ids: sector_meta.deals.clone(),
+                    });
+                }
                 sector_idx += 1;
                 j += 1;
             }
@@ -259,11 +307,43 @@ pub fn precommit_sectors_v2(
     (0..count)
         .map(|i| {
             mstate
-                .get_precommitted_sector(&DynBlockstore::new(w.store()), sector_number_base + i)
+                .get_precommitted_sector(
+                    &DynBlockstore::new(w.store()),
+                    sector_number_base + i as u64,
+                )
                 .unwrap()
                 .unwrap()
         })
         .collect()
+}
+
+pub fn submit_windowed_post(
+    w: &mut ExecutionWrangler,
+    worker: &Address,
+    maddr: &Address,
+    dline_info: DeadlineInfo,
+    partition_idx: u64,
+    _new_power: Option<PowerPair>,
+) -> ExecutionResult {
+    let params = SubmitWindowedPoStParams {
+        deadline: dline_info.index,
+        partitions: vec![PoStPartition { index: partition_idx, skipped: BitField::new() }],
+        proofs: vec![PoStProof {
+            post_proof: RegisteredPoStProof::StackedDRGWindow32GiBV1P1,
+            proof_bytes: vec![],
+        }],
+        chain_commit_epoch: dline_info.challenge,
+        chain_commit_rand: Randomness(TEST_VM_RAND_ARRAY.into()),
+    };
+    apply_ok(
+        w,
+        *worker,
+        *maddr,
+        TokenAmount::zero(),
+        MinerMethod::SubmitWindowedPoSt as u64,
+        &params,
+    )
+    .unwrap()
 }
 
 pub fn advance_by_deadline_to_epoch(
