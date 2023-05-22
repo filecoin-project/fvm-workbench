@@ -16,6 +16,7 @@ use fvm_shared::address::{Address, Protocol};
 use fvm_shared::clock::{ChainEpoch, QuantSpec};
 use fvm_shared::commcid::{FIL_COMMITMENT_SEALED, FIL_COMMITMENT_UNSEALED};
 use fvm_shared::crypto::signature::Signature;
+use fvm_shared::deal::DealID;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
 use fvm_shared::sector::{RegisteredSealProof, SectorNumber};
@@ -223,6 +224,10 @@ pub fn make_cid_poseidon(input: &[u8], prefix: u64) -> Cid {
     make_cid(input, prefix, MhCode::PoseidonFake)
 }
 
+pub fn make_bitfield(bits: &[u64]) -> BitField {
+    BitField::try_from_bits(bits.iter().copied()).unwrap()
+}
+
 pub fn sector_deadline(w: &mut ExecutionWrangler, m: &Address, s: SectorNumber) -> (u64, u64) {
     let m = w.resolve_address(m).unwrap().unwrap();
     let st: MinerState = w.find_actor_state(m).unwrap().unwrap();
@@ -257,4 +262,9 @@ pub fn get_miner_balance(w: &mut ExecutionWrangler, miner_id: ActorID) -> MinerB
         initial_pledge: st.initial_pledge,
         pre_commit_deposit: st.pre_commit_deposits,
     }
+}
+#[derive(Debug, Clone)]
+pub struct PrecommitMetadata {
+    pub deals: Vec<DealID>,
+    pub commd: CompactCommD,
 }

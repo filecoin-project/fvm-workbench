@@ -1,12 +1,11 @@
 use fil_actor_cron::Method as CronMethod;
 use fil_actor_miner::{
-    power_for_sector, DeadlineInfo, Method as MinerMethod, PoStPartition, PowerPair,
-    ProveCommitSectorParams, State as MinerState, SubmitWindowedPoStParams,
+    power_for_sector, Method as MinerMethod, ProveCommitSectorParams, State as MinerState,
 };
 use fil_actor_power::State as PowerState;
 use fil_actors_runtime::runtime::Policy;
 use fil_actors_runtime::{CRON_ACTOR_ADDR, STORAGE_POWER_ACTOR_ADDR, SYSTEM_ACTOR_ADDR};
-use fvm_ipld_bitfield::BitField;
+
 use fvm_ipld_blockstore::MemoryBlockstore;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
 use fvm_ipld_encoding::RawBytes;
@@ -15,17 +14,17 @@ use fvm_shared::bigint::Zero;
 use fvm_shared::crypto::signature::SignatureType;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
-use fvm_shared::randomness::Randomness;
-use fvm_shared::sector::{PoStProof, RegisteredPoStProof, RegisteredSealProof, SectorNumber};
+
+use fvm_shared::sector::{RegisteredSealProof, SectorNumber};
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::ActorID;
 use fvm_workbench_api::analysis::TraceAnalysis;
 use fvm_workbench_api::blockstore::DynBlockstore;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::{Bench, ExecutionResult, WorkbenchBuilder};
+use fvm_workbench_api::{Bench, WorkbenchBuilder};
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
-use fvm_workbench_vm::bench::kernel::TEST_VM_RAND_ARRAY;
+
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 
@@ -130,35 +129,6 @@ fn setup(
     )
 }
 
-pub fn submit_windowed_post(
-    w: &mut ExecutionWrangler,
-    worker: &Address,
-    maddr: &Address,
-    dline_info: DeadlineInfo,
-    partition_idx: u64,
-    _new_power: Option<PowerPair>,
-) -> ExecutionResult {
-    let params = SubmitWindowedPoStParams {
-        deadline: dline_info.index,
-        partitions: vec![PoStPartition { index: partition_idx, skipped: BitField::new() }],
-        proofs: vec![PoStProof {
-            post_proof: RegisteredPoStProof::StackedDRGWindow32GiBV1P1,
-            proof_bytes: vec![],
-        }],
-        chain_commit_epoch: dline_info.challenge,
-        chain_commit_rand: Randomness(TEST_VM_RAND_ARRAY.into()),
-    };
-    apply_ok(
-        w,
-        *worker,
-        *maddr,
-        TokenAmount::zero(),
-        MinerMethod::SubmitWindowedPoSt as u64,
-        &params,
-    )
-    .unwrap()
-}
-
 #[test]
 fn submit_post_succeeds() {
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
@@ -190,12 +160,9 @@ fn submit_post_succeeds() {
     let analysis = TraceAnalysis::build(result.trace);
     println!("{}", analysis.format_spans());
 
-    println!("Submitted windowed PoSt");
-
     let balances = get_miner_balance(&mut w, miner_info.miner_id.id().unwrap());
     assert!(balances.initial_pledge.is_positive(), "{:?}", balances);
     let p_st =
         w.find_actor_state::<PowerState>(STORAGE_POWER_ACTOR_ADDR.id().unwrap()).unwrap().unwrap();
     assert_eq!(sector_power.raw, p_st.total_bytes_committed);
-    println!("Sector power increased");
 }

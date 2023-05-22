@@ -11,7 +11,7 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 
-use crate::{ActorState, Bench, ExecutionResult};
+pub use crate::{ActorState, Bench, ExecutionResult};
 
 pub struct ExecutionWrangler<'b> {
     bench: &'b mut dyn Bench,
