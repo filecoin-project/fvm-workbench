@@ -192,6 +192,7 @@ fn batch_onboarding_deals() {
     // assert!(network_stats.total_pledge_collateral.is_positive());
 }
 
+// TODO use deal batcher instead
 fn publish_deals(
     w: &mut ExecutionWrangler,
     client: Address,
