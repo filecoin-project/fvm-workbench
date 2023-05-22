@@ -6,7 +6,7 @@ use fvm::gas::{Gas, GasTimer, PriceList};
 use fvm::kernel::{
     ActorOps, BlockId, BlockRegistry, BlockStat, CircSupplyOps, CryptoOps, DebugOps, EventOps,
     ExecutionError, GasOps, IpldBlockOps, LimiterOps, MessageOps, NetworkOps, RandomnessOps,
-    SelfOps, SendOps, SendResult,
+    SelfOps, SendResult,
 };
 use fvm::machine::limiter::MemoryLimiter;
 
@@ -87,6 +87,19 @@ where
 
     fn machine(&self) -> &<Self::CallManager as fvm::call_manager::CallManager>::Machine {
         self.inner_kernel.machine()
+    }
+
+    fn send<K: Kernel<CallManager = Self::CallManager>>(
+        &mut self,
+        recipient: &Address,
+        method: u64,
+        params: BlockId,
+        value: &TokenAmount,
+        gas_limit: Option<Gas>,
+        flags: SendFlags,
+    ) -> fvm::kernel::Result<SendResult> {
+        self.inner_kernel
+            .send::<BenchKernel<B, C>>(recipient, method, params, value, gas_limit, flags)
     }
 }
 
@@ -374,24 +387,6 @@ where
 
     fn self_destruct(&mut self, beneficiary: &Address) -> Result<()> {
         self.inner_kernel.self_destruct(beneficiary)
-    }
-}
-
-impl<B, C> SendOps for BenchKernel<B, C>
-where
-    B: Blockstore + 'static,
-    C: CallManager,
-{
-    fn send(
-        &mut self,
-        recipient: &Address,
-        method: u64,
-        params: BlockId,
-        value: &TokenAmount,
-        gas_limit: Option<Gas>,
-        flags: SendFlags,
-    ) -> Result<SendResult> {
-        self.inner_kernel.send(recipient, method, params, value, gas_limit, flags)
     }
 }
 

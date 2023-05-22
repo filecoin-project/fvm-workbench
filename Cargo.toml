@@ -13,37 +13,41 @@ license = "MIT OR Apache-2.0"
 authors = ["@anorth"]
 edition = "2021"
 
-# [patch.crates-io]
-# fvm = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
-# fvm_ipld_hamt = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
-# fvm_ipld_amt = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
-# fvm_ipld_blockstore = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
-# fvm_ipld_encoding = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
-# fvm_shared = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
-# fvm_sdk = {git="https://github.com/filecoin-project/ref-fvm", branch="master"}
+# TODO: patching temporarily to helix-onchain/ref-fvm:alexytsu/kernel-static
+# should patch to anorth/kernel-static or master (after merging anorth/kernel-static)
+# however, currently, anorth/kernel-static is on fvm = 3.4.0 and fvm_shared = 3.3.1 
+# and patching to that requires upgrades of builtin-actors and helix/filecoin libraries
+[patch.crates-io]
+fvm = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+fvm_ipld_hamt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+fvm_ipld_amt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+fvm_ipld_blockstore = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+fvm_ipld_encoding = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+fvm_shared = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+fvm_sdk = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
 
 ## Patches for local development
-#fvm = { path = "../../filecoin-project/ref-fvm-v2/fvm" }
-#fvm_ipld_hamt = { path = "../../filecoin-project/ref-fvm-v2/ipld/hamt"}
-#fvm_ipld_amt = { path = "../../filecoin-project/ref-fvm-v2/ipld/amt"}
-#fvm_ipld_blockstore = { path = "../../filecoin-project/ref-fvm-v2/ipld/blockstore" }
-#fvm_ipld_encoding = { path = "../../filecoin-project/ref-fvm-v2/ipld/encoding" }
-#fvm_shared = { path = "../../filecoin-project/ref-fvm-v2/shared" }
-#fvm_sdk = { path = "../../filecoin-project/ref-fvm-v2/sdk" }
+# fvm = { path = "../../filecoin-project/ref-fvm/fvm" }
+# fvm_ipld_hamt = { path = "../../filecoin-project/ref-fvm/ipld/hamt"}
+# fvm_ipld_amt = { path = "../../filecoin-project/ref-fvm/ipld/amt"}
+# fvm_ipld_blockstore = { path = "../../filecoin-project/ref-fvm/ipld/blockstore" }
+# fvm_ipld_encoding = { path = "../../filecoin-project/ref-fvm/ipld/encoding" }
+# fvm_shared = { path = "../../filecoin-project/ref-fvm/shared" }
+# fvm_sdk = { path = "../../filecoin-project/ref-fvm/sdk" }
 
 [patch.'https://github.com/filecoin-project/builtin-actors']
 ## Patches to profile/benchmark local changes to actor code.
-fil_builtin_actors_bundle = { path = "../../filecoin-project/builtin-actors" }
-fil_actor_account = { path = "../../filecoin-project/builtin-actors/actors/account" }
-fil_actor_cron = { path = "../../filecoin-project/builtin-actors/actors/cron" }
-fil_actor_datacap = { path = "../../filecoin-project/builtin-actors/actors/datacap" }
-fil_actor_init = { path = "../../filecoin-project/builtin-actors/actors/init" }
-fil_actor_market = { path = "../../filecoin-project/builtin-actors/actors/market" }
-fil_actor_miner = { path = "../../filecoin-project/builtin-actors/actors/miner" }
-fil_actor_multisig = { path = "../../filecoin-project/builtin-actors/actors/multisig" }
-fil_actor_paych = { path = "../../filecoin-project/builtin-actors/actors/paych" }
-fil_actor_power = { path = "../../filecoin-project/builtin-actors/actors/power" }
-fil_actor_reward = { path = "../../filecoin-project/builtin-actors/actors/reward" }
-fil_actor_system = { path = "../../filecoin-project/builtin-actors/actors/system" }
-fil_actor_verifreg = { path = "../../filecoin-project/builtin-actors/actors/verifreg" }
-fil_actors_runtime = { path = "../../filecoin-project/builtin-actors/runtime" }
+# fil_builtin_actors_bundle = { path = "../../filecoin-project/builtin-actors" }
+# fil_actor_account = { path = "../../filecoin-project/builtin-actors/actors/account" }
+# fil_actor_cron = { path = "../../filecoin-project/builtin-actors/actors/cron" }
+# fil_actor_datacap = { path = "../../filecoin-project/builtin-actors/actors/datacap" }
+# fil_actor_init = { path = "../../filecoin-project/builtin-actors/actors/init" }
+# fil_actor_market = { path = "../../filecoin-project/builtin-actors/actors/market" }
+# fil_actor_miner = { path = "../../filecoin-project/builtin-actors/actors/miner" }
+# fil_actor_multisig = { path = "../../filecoin-project/builtin-actors/actors/multisig" }
+# fil_actor_paych = { path = "../../filecoin-project/builtin-actors/actors/paych" }
+# fil_actor_power = { path = "../../filecoin-project/builtin-actors/actors/power" }
+# fil_actor_reward = { path = "../../filecoin-project/builtin-actors/actors/reward" }
+# fil_actor_system = { path = "../../filecoin-project/builtin-actors/actors/system" }
+# fil_actor_verifreg = { path = "../../filecoin-project/builtin-actors/actors/verifreg" }
+# fil_actors_runtime = { path = "../../filecoin-project/builtin-actors/runtime" }
