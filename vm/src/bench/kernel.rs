@@ -32,7 +32,7 @@ use fvm_shared::{ActorID, MethodNum, TOTAL_FILECOIN};
 use multihash::MultihashGeneric;
 
 #[derive(Debug, Clone)]
-pub struct TestData {
+pub struct TestConfiguration {
     circ_supply: TokenAmount,
     price_list: PriceList,
 }
@@ -41,7 +41,7 @@ pub type Result<T> = std::result::Result<T, ExecutionError>;
 
 pub struct BenchKernel<B: Blockstore + 'static, C: CallManager> {
     inner_kernel: DefaultKernel<C>,
-    test_data: TestData,
+    test_config: TestConfiguration,
     phantom: PhantomData<B>,
 }
 
@@ -80,7 +80,7 @@ where
 
         BenchKernel {
             inner_kernel: default_kernel,
-            test_data: TestData { circ_supply: TOTAL_FILECOIN.clone(), price_list },
+            test_config: TestConfiguration { circ_supply: TOTAL_FILECOIN.clone(), price_list },
             phantom: PhantomData,
         }
     }
@@ -137,11 +137,6 @@ where
         self.inner_kernel.get_code_cid_for_type(typ)
     }
 
-    #[cfg(feature = "m2-native")]
-    fn install_actor(&mut self, _code_id: Cid) -> Result<()> {
-        Ok(())
-    }
-
     fn balance_of(&self, actor_id: ActorID) -> Result<TokenAmount> {
         self.inner_kernel.balance_of(actor_id)
     }
@@ -184,7 +179,7 @@ where
 {
     // Not forwarded. Circulating supply is taken from the TestData.
     fn total_fil_circ_supply(&self) -> Result<TokenAmount> {
-        Ok(self.test_data.circ_supply.clone())
+        Ok(self.test_config.circ_supply.clone())
     }
 }
 
@@ -235,14 +230,14 @@ where
 
     // NOT forwarded
     fn verify_seal(&self, vi: &SealVerifyInfo) -> Result<bool> {
-        let charge = self.test_data.price_list.on_verify_seal(vi);
+        let charge = self.test_config.price_list.on_verify_seal(vi);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 
     // NOT forwarded
     fn verify_post(&self, vi: &WindowPoStVerifyInfo) -> Result<bool> {
-        let charge = self.test_data.price_list.on_verify_post(vi);
+        let charge = self.test_config.price_list.on_verify_post(vi);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
@@ -255,21 +250,21 @@ where
         extra: &[u8],
     ) -> Result<Option<ConsensusFault>> {
         let charge =
-            self.test_data.price_list.on_verify_consensus_fault(h1.len(), h2.len(), extra.len());
+            self.test_config.price_list.on_verify_consensus_fault(h1.len(), h2.len(), extra.len());
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(None)
     }
 
     // NOT forwarded
     fn verify_aggregate_seals(&self, agg: &AggregateSealVerifyProofAndInfos) -> Result<bool> {
-        let charge = self.test_data.price_list.on_verify_aggregate_seals(agg);
+        let charge = self.test_config.price_list.on_verify_aggregate_seals(agg);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 
     // NOT forwarded
     fn verify_replica_update(&self, rep: &ReplicaUpdateInfo) -> Result<bool> {
-        let charge = self.test_data.price_list.on_verify_replica_update(rep);
+        let charge = self.test_config.price_list.on_verify_replica_update(rep);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }

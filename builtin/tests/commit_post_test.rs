@@ -113,15 +113,8 @@ fn setup(
 
     println!("PCD verified, initial pledge is positive {}", balances.initial_pledge);
 
-    // power unproven so network stats are the same
-    // let network_stats = v.get_network_stats();
-    // assert!(network_stats.total_bytes_committed.is_zero());
-    // assert!(network_stats.total_pledge_collateral.is_positive());
-
     let (deadline_info, partition_index) =
         advance_to_proving_deadline(&mut w, &miner_addr, sector_number);
-
-    println!("Setup complete");
 
     (
         w,
