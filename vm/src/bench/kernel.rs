@@ -33,6 +33,9 @@ pub const TEST_VM_RAND_ARRAY: [u8; 32] = [
     26, 27, 28, 29, 30, 31, 32,
 ];
 
+// TODO: extend test configuration to allow dynamic toggling for certain features to be intercepted
+// and the behaviour once intercepted
+// https://github.com/anorth/fvm-workbench/issues/9
 #[derive(Debug, Clone)]
 pub struct TestConfiguration {
     circ_supply: TokenAmount,
@@ -214,6 +217,10 @@ where
 
     // NOT forwarded
     fn batch_verify_seals(&self, vis: &[SealVerifyInfo]) -> Result<Vec<bool>> {
+        for vi in vis {
+            let charge = self.test_config.price_list.on_verify_seal(vi);
+            let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
+        }
         Ok(vec![true; vis.len()])
     }
 
@@ -323,13 +330,15 @@ impl<C> RandomnessOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    // NOT forwarded, this hardcoded randomness is used for testing
+    // NOT forwarded
     fn get_randomness_from_tickets(
         &self,
         _personalization: i64,
         _rand_epoch: ChainEpoch,
-        _entropy: &[u8],
+        entropy: &[u8],
     ) -> Result<[u8; RANDOMNESS_LENGTH]> {
+        let charge = self.test_config.price_list.on_get_randomness(entropy.len());
+        let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(TEST_VM_RAND_ARRAY)
     }
 
