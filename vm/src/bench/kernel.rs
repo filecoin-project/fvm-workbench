@@ -28,6 +28,11 @@ use fvm_shared::{ActorID, MethodNum, TOTAL_FILECOIN};
 
 use multihash::MultihashGeneric;
 
+pub const TEST_VM_RAND_ARRAY: [u8; 32] = [
+    1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28, 29, 30, 31, 32,
+];
+
 #[derive(Debug, Clone)]
 pub struct TestConfiguration {
     circ_supply: TokenAmount,
@@ -68,11 +73,7 @@ where
     {
         let default_kernel =
             DefaultKernel::new(mgr, blocks, caller, actor_id, method, value_received, read_only);
-
         let price_list = default_kernel.price_list().clone();
-
-        println!("Making a new kernel {}->{} for method {}", caller, actor_id, method);
-
         BenchKernel {
             inner_kernel: default_kernel,
             test_config: TestConfiguration { circ_supply: TOTAL_FILECOIN.clone(), price_list },
@@ -213,7 +214,6 @@ where
 
     // NOT forwarded
     fn batch_verify_seals(&self, vis: &[SealVerifyInfo]) -> Result<Vec<bool>> {
-        println!("MOCKED BATCH VERIFY SEALS");
         Ok(vec![true; vis.len()])
     }
 
@@ -323,17 +323,13 @@ impl<C> RandomnessOps for BenchKernel<C>
 where
     C: CallManager,
 {
+    // NOT forwarded, this hardcoded randomness is used for testing
     fn get_randomness_from_tickets(
         &self,
         _personalization: i64,
         _rand_epoch: ChainEpoch,
         _entropy: &[u8],
     ) -> Result<[u8; RANDOMNESS_LENGTH]> {
-        println!("Mocking Randomness with Hardcoded Value");
-        const TEST_VM_RAND_ARRAY: [u8; 32] = [
-            1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-            24, 25, 26, 27, 28, 29, 30, 31, 32,
-        ];
         Ok(TEST_VM_RAND_ARRAY)
     }
 

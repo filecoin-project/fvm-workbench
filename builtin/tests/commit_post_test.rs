@@ -25,6 +25,7 @@ use fvm_workbench_api::blockstore::BlockstoreWrapper;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::{Bench, WorkbenchBuilder};
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
+use fvm_workbench_vm::bench::kernel::TEST_VM_RAND_ARRAY;
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 

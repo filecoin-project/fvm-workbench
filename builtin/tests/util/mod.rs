@@ -64,11 +64,6 @@ pub fn apply_code<T: ser::Serialize + ?Sized>(
     Ok(ret)
 }
 
-pub const TEST_VM_RAND_ARRAY: [u8; 32] = [
-    1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-    26, 27, 28, 29, 30, 31, 32,
-];
-
 /// A crypto-key backed account, including the secret key.
 /// Currently always a SECP256k1 key.
 #[derive(Debug, Clone)]
