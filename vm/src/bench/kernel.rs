@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use cid::Cid;
 use fvm::call_manager::CallManager;
 use fvm::gas::{Gas, GasTimer, PriceList};
@@ -11,7 +9,6 @@ use fvm::kernel::{
 use fvm::machine::limiter::MemoryLimiter;
 
 use fvm::{DefaultKernel, Kernel};
-use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::address::{Address, SECP_PUB_LEN};
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::consensus::ConsensusFault;
@@ -39,15 +36,13 @@ pub struct TestConfiguration {
 
 pub type Result<T> = std::result::Result<T, ExecutionError>;
 
-pub struct BenchKernel<B: Blockstore + 'static, C: CallManager> {
+pub struct BenchKernel<C: CallManager> {
     inner_kernel: DefaultKernel<C>,
     test_config: TestConfiguration,
-    phantom: PhantomData<B>,
 }
 
-impl<B, C> Kernel for BenchKernel<B, C>
+impl<C> Kernel for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     type CallManager = C;
@@ -81,7 +76,6 @@ where
         BenchKernel {
             inner_kernel: default_kernel,
             test_config: TestConfiguration { circ_supply: TOTAL_FILECOIN.clone(), price_list },
-            phantom: PhantomData,
         }
     }
 
@@ -98,14 +92,12 @@ where
         gas_limit: Option<Gas>,
         flags: SendFlags,
     ) -> fvm::kernel::Result<SendResult> {
-        self.inner_kernel
-            .send::<BenchKernel<B, C>>(recipient, method, params, value, gas_limit, flags)
+        self.inner_kernel.send::<BenchKernel<C>>(recipient, method, params, value, gas_limit, flags)
     }
 }
 
-impl<B, C> ActorOps for BenchKernel<B, C>
+impl<C> ActorOps for BenchKernel<C>
 where
-    B: Blockstore,
     C: CallManager,
 {
     fn resolve_address(&self, address: &Address) -> Result<ActorID> {
@@ -146,9 +138,8 @@ where
     }
 }
 
-impl<B, C> IpldBlockOps for BenchKernel<B, C>
+impl<C> IpldBlockOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     fn block_open(&mut self, cid: &Cid) -> std::result::Result<(u32, BlockStat), ExecutionError> {
@@ -172,9 +163,8 @@ where
     }
 }
 
-impl<B, C> CircSupplyOps for BenchKernel<B, C>
+impl<C> CircSupplyOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     // Not forwarded. Circulating supply is taken from the TestData.
@@ -183,9 +173,8 @@ where
     }
 }
 
-impl<B, C> CryptoOps for BenchKernel<B, C>
+impl<C> CryptoOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     // forwarded
@@ -270,9 +259,8 @@ where
     }
 }
 
-impl<B, C> DebugOps for BenchKernel<B, C>
+impl<C> DebugOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     fn log(&self, msg: String) {
@@ -288,9 +276,8 @@ where
     }
 }
 
-impl<B, C> GasOps for BenchKernel<B, C>
+impl<C> GasOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     fn gas_used(&self) -> Gas {
@@ -310,9 +297,8 @@ where
     }
 }
 
-impl<B, C> MessageOps for BenchKernel<B, C>
+impl<C> MessageOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     fn msg_context(&self) -> Result<MessageContext> {
@@ -320,9 +306,8 @@ where
     }
 }
 
-impl<B, C> NetworkOps for BenchKernel<B, C>
+impl<C> NetworkOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     fn network_context(&self) -> Result<NetworkContext> {
@@ -334,9 +319,8 @@ where
     }
 }
 
-impl<B, C> RandomnessOps for BenchKernel<B, C>
+impl<C> RandomnessOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     fn get_randomness_from_tickets(
@@ -363,9 +347,8 @@ where
     }
 }
 
-impl<B, C> SelfOps for BenchKernel<B, C>
+impl<C> SelfOps for BenchKernel<C>
 where
-    B: Blockstore + 'static,
     C: CallManager,
 {
     fn root(&self) -> Result<Cid> {
@@ -385,9 +368,8 @@ where
     }
 }
 
-impl<B, C> EventOps for BenchKernel<B, C>
+impl<C> EventOps for BenchKernel<C>
 where
-    B: Blockstore,
     C: CallManager,
 {
     fn emit_event(&mut self, raw_evt: &[u8]) -> Result<()> {
@@ -395,9 +377,8 @@ where
     }
 }
 
-impl<B, C> LimiterOps for BenchKernel<B, C>
+impl<C> LimiterOps for BenchKernel<C>
 where
-    B: Blockstore,
     C: CallManager,
 {
     type Limiter = <DefaultKernel<C> as LimiterOps>::Limiter;

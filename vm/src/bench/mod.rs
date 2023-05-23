@@ -29,7 +29,7 @@ where
 }
 
 type BenchExecutor<B> =
-    DefaultExecutor<BenchKernel<B, DefaultCallManager<DefaultMachine<B, FakeExterns>>>>;
+    DefaultExecutor<BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>;
 
 impl<B> FvmBench<B>
 where
@@ -110,12 +110,10 @@ where
             )
             .unwrap();
 
-            DefaultExecutor::<
-                BenchKernel<
-                    B,
-                     DefaultCallManager<DefaultMachine<B, FakeExterns>>,
-                >,
-            >::new(EnginePool::new_default(engine_conf).unwrap(), machine)
+            DefaultExecutor::<BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>::new(
+                EnginePool::new_default(engine_conf).unwrap(),
+                machine,
+            )
             .unwrap()
         });
     }

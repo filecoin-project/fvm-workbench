@@ -200,7 +200,7 @@ where
             self.externs.clone(),
         )?;
         let executor = DefaultExecutor::<
-            BenchKernel<B, DefaultCallManager<DefaultMachine<B, FakeExterns>>>,
+            BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>,
         >::new(EnginePool::new_default(engine_conf)?, machine)?;
         Ok(Box::new(FvmBench::new(executor)))
     }
