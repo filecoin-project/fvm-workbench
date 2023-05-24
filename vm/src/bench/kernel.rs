@@ -6,7 +6,6 @@ use fvm::kernel::{
     ExecutionError, GasOps, IpldBlockOps, LimiterOps, MessageOps, NetworkOps, RandomnessOps,
     SelfOps, SendResult,
 };
-use fvm::machine::limiter::MemoryLimiter;
 
 use fvm::{DefaultKernel, Kernel};
 use fvm_shared::address::{Address, SECP_PUB_LEN};
@@ -24,7 +23,7 @@ use fvm_shared::sector::{
 use fvm_shared::sys::out::network::NetworkContext;
 use fvm_shared::sys::out::vm::MessageContext;
 use fvm_shared::sys::SendFlags;
-use fvm_shared::{ActorID, MethodNum, TOTAL_FILECOIN};
+use fvm_shared::{ActorID, MethodNum};
 
 use multihash::MultihashGeneric;
 
@@ -33,20 +32,12 @@ pub const TEST_VM_RAND_ARRAY: [u8; 32] = [
     26, 27, 28, 29, 30, 31, 32,
 ];
 
-// TODO: extend test configuration to allow dynamic toggling for certain features to be intercepted
-// and the behaviour once intercepted
-// https://github.com/anorth/fvm-workbench/issues/9
-#[derive(Debug, Clone)]
-pub struct TestConfiguration {
-    circ_supply: TokenAmount,
-    price_list: PriceList,
-}
-
 pub type Result<T> = std::result::Result<T, ExecutionError>;
 
+/// A BenchKernel wraps a default kernel, delegating most functionality to it but intercepting certain
+/// methods to return static data.
 pub struct BenchKernel<C: CallManager> {
     inner_kernel: DefaultKernel<C>,
-    test_config: TestConfiguration,
 }
 
 impl<C> Kernel for BenchKernel<C>
@@ -74,12 +65,16 @@ where
     where
         Self: Sized,
     {
-        let default_kernel =
-            DefaultKernel::new(mgr, blocks, caller, actor_id, method, value_received, read_only);
-        let price_list = default_kernel.price_list().clone();
         BenchKernel {
-            inner_kernel: default_kernel,
-            test_config: TestConfiguration { circ_supply: TOTAL_FILECOIN.clone(), price_list },
+            inner_kernel: DefaultKernel::new(
+                mgr,
+                blocks,
+                caller,
+                actor_id,
+                method,
+                value_received,
+                read_only,
+            ),
         }
     }
 
@@ -96,10 +91,11 @@ where
         gas_limit: Option<Gas>,
         flags: SendFlags,
     ) -> fvm::kernel::Result<SendResult> {
-        self.inner_kernel.send::<BenchKernel<C>>(recipient, method, params, value, gas_limit, flags)
+        self.inner_kernel.send::<K>(recipient, method, params, value, gas_limit, flags)
     }
 }
 
+/// All ActorOps are forwarded to the DefaultKernel
 impl<C> ActorOps for BenchKernel<C>
 where
     C: CallManager,
@@ -142,6 +138,7 @@ where
     }
 }
 
+/// All IpldBlockOps are forwarded to the DefaultKernel
 impl<C> IpldBlockOps for BenchKernel<C>
 where
     C: CallManager,
@@ -167,16 +164,17 @@ where
     }
 }
 
+/// All CircSupplyOps are forwarded to the DefaultKernel
 impl<C> CircSupplyOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    // Not forwarded. Circulating supply is taken from the TestData.
     fn total_fil_circ_supply(&self) -> Result<TokenAmount> {
-        Ok(self.test_config.circ_supply.clone())
+        self.inner_kernel.total_fil_circ_supply()
     }
 }
 
+/// Some CryptoOps are faked so that proofs do not need to be calculated in tests
 impl<C> CryptoOps for BenchKernel<C>
 where
     C: CallManager,
@@ -215,57 +213,61 @@ where
         self.inner_kernel.recover_secp_public_key(hash, signature)
     }
 
-    // NOT forwarded
+    // NOT forwarded - verifications always succeed
     fn batch_verify_seals(&self, vis: &[SealVerifyInfo]) -> Result<Vec<bool>> {
         for vi in vis {
-            let charge = self.test_config.price_list.on_verify_seal(vi);
+            let charge = self.inner_kernel.price_list().on_verify_seal(vi);
             let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         }
         Ok(vec![true; vis.len()])
     }
 
-    // NOT forwarded
+    // NOT forwarded - verification always succeeds
     fn verify_seal(&self, vi: &SealVerifyInfo) -> Result<bool> {
-        let charge = self.test_config.price_list.on_verify_seal(vi);
+        let charge = self.inner_kernel.price_list().on_verify_seal(vi);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 
-    // NOT forwarded
+    // NOT forwarded - verification always succeeds
     fn verify_post(&self, vi: &WindowPoStVerifyInfo) -> Result<bool> {
-        let charge = self.test_config.price_list.on_verify_post(vi);
+        let charge = self.inner_kernel.price_list().on_verify_post(vi);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 
-    // NOT forwarded
+    // NOT forwarded - no fault detected
     fn verify_consensus_fault(
         &self,
         h1: &[u8],
         h2: &[u8],
         extra: &[u8],
     ) -> Result<Option<ConsensusFault>> {
-        let charge =
-            self.test_config.price_list.on_verify_consensus_fault(h1.len(), h2.len(), extra.len());
+        let charge = self.inner_kernel.price_list().on_verify_consensus_fault(
+            h1.len(),
+            h2.len(),
+            extra.len(),
+        );
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(None)
     }
 
-    // NOT forwarded
+    // NOT forwarded - all proofs are verified
     fn verify_aggregate_seals(&self, agg: &AggregateSealVerifyProofAndInfos) -> Result<bool> {
-        let charge = self.test_config.price_list.on_verify_aggregate_seals(agg);
+        let charge = self.inner_kernel.price_list().on_verify_aggregate_seals(agg);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 
-    // NOT forwarded
+    // NOT forwarded - all replicas are verified
     fn verify_replica_update(&self, rep: &ReplicaUpdateInfo) -> Result<bool> {
-        let charge = self.test_config.price_list.on_verify_replica_update(rep);
+        let charge = self.inner_kernel.price_list().on_verify_replica_update(rep);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 }
 
+/// All DebugOps are forwarded to the DefaultKernel
 impl<C> DebugOps for BenchKernel<C>
 where
     C: CallManager,
@@ -283,6 +285,7 @@ where
     }
 }
 
+/// All GasOps are forwarded to the DefaultKernel
 impl<C> GasOps for BenchKernel<C>
 where
     C: CallManager,
@@ -304,6 +307,7 @@ where
     }
 }
 
+/// All MessageOps are forwarded to the DefaultKernel
 impl<C> MessageOps for BenchKernel<C>
 where
     C: CallManager,
@@ -313,6 +317,7 @@ where
     }
 }
 
+/// All NetworkOps are forwarded to the DefaultKernel
 impl<C> NetworkOps for BenchKernel<C>
 where
     C: CallManager,
@@ -337,7 +342,7 @@ where
         _rand_epoch: ChainEpoch,
         entropy: &[u8],
     ) -> Result<[u8; RANDOMNESS_LENGTH]> {
-        let charge = self.test_config.price_list.on_get_randomness(entropy.len());
+        let charge = self.inner_kernel.price_list().on_get_randomness(entropy.len());
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(TEST_VM_RAND_ARRAY)
     }
@@ -352,6 +357,7 @@ where
     }
 }
 
+/// All SelfOps are forwarded to the DefaultKernel
 impl<C> SelfOps for BenchKernel<C>
 where
     C: CallManager,
@@ -373,6 +379,7 @@ where
     }
 }
 
+/// All EventOps are forwarded to the DefaultKernel
 impl<C> EventOps for BenchKernel<C>
 where
     C: CallManager,
@@ -382,6 +389,7 @@ where
     }
 }
 
+/// All LimiterOps are forwarded to the DefaultKernel
 impl<C> LimiterOps for BenchKernel<C>
 where
     C: CallManager,
@@ -390,32 +398,5 @@ where
 
     fn limiter_mut(&mut self) -> &mut Self::Limiter {
         self.inner_kernel.limiter_mut()
-    }
-}
-
-#[derive(Default)]
-pub struct DummyLimiter {
-    curr_exec_memory_bytes: usize,
-}
-
-impl MemoryLimiter for DummyLimiter {
-    fn with_stack_frame<T, G, F, R>(t: &mut T, g: G, f: F) -> R
-    where
-        G: Fn(&mut T) -> &mut Self,
-        F: FnOnce(&mut T) -> R,
-    {
-        let memory_bytes = g(t).curr_exec_memory_bytes;
-        let ret = f(t);
-        g(t).curr_exec_memory_bytes = memory_bytes;
-        ret
-    }
-
-    fn memory_used(&self) -> usize {
-        self.curr_exec_memory_bytes
-    }
-
-    fn grow_memory(&mut self, bytes: usize) -> bool {
-        self.curr_exec_memory_bytes += bytes;
-        true
     }
 }

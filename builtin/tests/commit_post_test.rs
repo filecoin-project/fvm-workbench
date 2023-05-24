@@ -21,9 +21,9 @@ use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::ActorID;
 use fvm_workbench_api::analysis::TraceAnalysis;
-use fvm_workbench_api::blockstore::BlockstoreWrapper;
+use fvm_workbench_api::blockstore::DynBlockstore;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::{Bench, WorkbenchBuilder};
+use fvm_workbench_api::{Bench, ExecutionResult, WorkbenchBuilder};
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_vm::bench::kernel::TEST_VM_RAND_ARRAY;
 use fvm_workbench_vm::builder::FvmBenchBuilder;
@@ -137,7 +137,7 @@ pub fn submit_windowed_post(
     dline_info: DeadlineInfo,
     partition_idx: u64,
     _new_power: Option<PowerPair>,
-) {
+) -> ExecutionResult {
     let params = SubmitWindowedPoStParams {
         deadline: dline_info.index,
         partitions: vec![PoStPartition { index: partition_idx, skipped: BitField::new() }],
@@ -148,7 +148,7 @@ pub fn submit_windowed_post(
         chain_commit_epoch: dline_info.challenge,
         chain_commit_rand: Randomness(TEST_VM_RAND_ARRAY.into()),
     };
-    let result = apply_ok(
+    apply_ok(
         w,
         *worker,
         *maddr,
@@ -156,11 +156,7 @@ pub fn submit_windowed_post(
         MinerMethod::SubmitWindowedPoSt as u64,
         &params,
     )
-    .unwrap();
-
-    // println!("{}", result.trace.format());
-    let analysis = TraceAnalysis::build(result.trace);
-    println!("{}", analysis.format_spans());
+    .unwrap()
 }
 
 #[test]
@@ -181,9 +177,9 @@ fn submit_post_succeeds() {
     // submit post
     let st = w.find_actor_state::<MinerState>(miner_info.miner_id.id().unwrap()).unwrap().unwrap();
     let sector =
-        st.get_sector(&BlockstoreWrapper::new(w.store()), sector_info.number).unwrap().unwrap();
+        st.get_sector(&DynBlockstore::new(w.store()), sector_info.number).unwrap().unwrap();
     let sector_power = power_for_sector(miner_info.seal_proof.sector_size().unwrap(), &sector);
-    submit_windowed_post(
+    let result = submit_windowed_post(
         &mut w,
         &miner_info.worker,
         &miner_info.miner_id,
@@ -191,6 +187,9 @@ fn submit_post_succeeds() {
         sector_info.partition_index,
         Some(sector_power.clone()),
     );
+    let analysis = TraceAnalysis::build(result.trace);
+    println!("{}", analysis.format_spans());
+
     println!("Submitted windowed PoSt");
 
     let balances = get_miner_balance(&mut w, miner_info.miner_id.id().unwrap());
