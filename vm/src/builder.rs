@@ -6,7 +6,6 @@ use fvm::engine::EnginePool;
 use fvm::executor::DefaultExecutor;
 use fvm::machine::{DefaultMachine, MachineContext, Manifest, NetworkConfig};
 use fvm::state_tree::{ActorState, StateTree};
-use fvm::DefaultKernel;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_car::load_car_unchecked;
 use fvm_ipld_encoding::ser::Serialize;
@@ -19,7 +18,7 @@ use fvm_shared::ActorID;
 use fvm_workbench_api::{Bench, WorkbenchBuilder};
 use multihash::Code;
 
-use crate::bench::FvmBench;
+use crate::bench::{BenchKernel, FvmBench};
 use crate::externs::FakeExterns;
 
 /// A factory for workbench instances backed by a real FVM.
@@ -201,7 +200,7 @@ where
             self.externs.clone(),
         )?;
         let executor = DefaultExecutor::<
-            DefaultKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>,
+            BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>,
         >::new(EnginePool::new_default(engine_conf)?, machine)?;
         Ok(Box::new(FvmBench::new(executor)))
     }

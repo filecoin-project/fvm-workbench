@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::{de, from_slice, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
@@ -122,8 +123,11 @@ impl<'b> ExecutionWrangler<'b> {
         self.bench.resolve_address(addr)
     }
 
-    ///// Private helpers /////
+    pub fn store(&self) -> &dyn Blockstore {
+        self.bench.store()
+    }
 
+    ///// Private helpers /////
     fn make_msg(
         &self,
         from: Address,

@@ -11,6 +11,7 @@ use fvm_shared::ActorID;
 use crate::trace::ExecutionTrace;
 
 pub mod analysis;
+pub mod blockstore;
 pub mod trace;
 pub mod wrangler;
 

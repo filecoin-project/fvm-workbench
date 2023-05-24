@@ -1,15 +1,26 @@
+#![allow(dead_code)]
+// Code used only in tests is treated as "dead"
 use bls_signatures::Serialize as BLS_Serialize;
 use cid::Cid;
+use fil_actor_miner::DeadlineInfo;
+use fil_actor_miner::{
+    max_prove_commit_duration, new_deadline_info, CompactCommD, Method as MinerMethod,
+    PreCommitSectorBatchParams, PreCommitSectorBatchParams2, PreCommitSectorParams,
+    SectorPreCommitInfo, State as MinerState,
+};
 use fil_actors_runtime::runtime::Policy;
 use fil_actors_runtime::util::cbor::serialize;
 use fvm_ipld_bitfield::BitField;
 use fvm_ipld_encoding::ser;
 use fvm_shared::address::{Address, Protocol};
-use fvm_shared::commcid::FIL_COMMITMENT_UNSEALED;
+use fvm_shared::clock::{ChainEpoch, QuantSpec};
+use fvm_shared::commcid::{FIL_COMMITMENT_SEALED, FIL_COMMITMENT_UNSEALED};
 use fvm_shared::crypto::signature::Signature;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
+use fvm_shared::sector::{RegisteredSealProof, SectorNumber};
 use fvm_shared::{ActorID, MethodNum};
+use fvm_workbench_api::blockstore::DynBlockstore;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::ExecutionResult;
 use multihash::derive::Multihash;
@@ -66,12 +77,10 @@ impl Account {
         Address::new_id(self.id)
     }
 
-    #[allow(dead_code)]
     pub fn key_addr(&self) -> Address {
         self.key.addr
     }
 
-    #[allow(dead_code)]
     pub fn sign(&self, msg: &[u8]) -> anyhow::Result<Signature> {
         self.key.sign(msg)
     }
@@ -178,7 +187,74 @@ pub enum MhCode {
     Sha256TruncPaddedFake,
 }
 
-#[allow(dead_code)]
 pub fn bf_all(bf: BitField) -> Vec<u64> {
     bf.bounded_iter(Policy::default().addressed_sectors_max).unwrap().collect()
+}
+
+#[derive(Debug)]
+pub struct MinerBalances {
+    pub available_balance: TokenAmount,
+    pub vesting_balance: TokenAmount,
+    pub initial_pledge: TokenAmount,
+    pub pre_commit_deposit: TokenAmount,
+}
+
+#[derive(Debug)]
+pub struct SectorInfo {
+    pub number: SectorNumber,
+    pub deadline_info: DeadlineInfo,
+    pub partition_index: u64,
+}
+
+#[derive(Debug)]
+pub struct MinerInfo {
+    pub seal_proof: RegisteredSealProof,
+    pub worker: Address,
+    pub miner_id: Address,
+    pub owner: Address,
+    pub miner_robust: Address,
+}
+
+pub fn make_sealed_cid(input: &[u8]) -> Cid {
+    make_cid_poseidon(input, FIL_COMMITMENT_SEALED)
+}
+
+pub fn make_cid_poseidon(input: &[u8], prefix: u64) -> Cid {
+    make_cid(input, prefix, MhCode::PoseidonFake)
+}
+
+pub fn sector_deadline(w: &mut ExecutionWrangler, m: &Address, s: SectorNumber) -> (u64, u64) {
+    let m = w.resolve_address(m).unwrap().unwrap();
+    let st: MinerState = w.find_actor_state(m).unwrap().unwrap();
+    st.find_sector(&Policy::default(), &DynBlockstore::new(w.store()), s).unwrap()
+}
+
+pub fn miner_dline_info(w: &mut ExecutionWrangler, maddr: &Address) -> DeadlineInfo {
+    let m_id = w.resolve_address(maddr).unwrap().unwrap();
+    let st: MinerState = w.find_actor_state(m_id).unwrap().unwrap();
+    new_deadline_info_from_offset_and_epoch(&Policy::default(), st.proving_period_start, w.epoch())
+}
+
+pub fn new_deadline_info_from_offset_and_epoch(
+    policy: &Policy,
+    period_start_seed: ChainEpoch,
+    current_epoch: ChainEpoch,
+) -> DeadlineInfo {
+    let q = QuantSpec { unit: policy.wpost_proving_period, offset: period_start_seed };
+    let current_period_start = q.quantize_down(current_epoch);
+    let current_deadline_idx = ((current_epoch - current_period_start)
+        / policy.wpost_challenge_window) as u64
+        % policy.wpost_period_deadlines;
+    new_deadline_info(policy, current_period_start, current_deadline_idx, current_epoch)
+}
+
+pub fn get_miner_balance(w: &mut ExecutionWrangler, miner_id: ActorID) -> MinerBalances {
+    let a = w.find_actor(miner_id).unwrap().unwrap();
+    let st: MinerState = w.find_actor_state(miner_id).unwrap().unwrap();
+    MinerBalances {
+        available_balance: st.get_available_balance(&a.balance).unwrap(),
+        vesting_balance: st.locked_funds,
+        initial_pledge: st.initial_pledge,
+        pre_commit_deposit: st.pre_commit_deposits,
+    }
 }
