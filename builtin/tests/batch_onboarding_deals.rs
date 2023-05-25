@@ -111,8 +111,6 @@ fn batch_onboarding_deals() {
         publish_deals(&mut w, client.id_addr(), miner, worker.id_addr(), deal_duration, BATCH_SIZE);
     assert_eq!(BATCH_SIZE, deals.len());
 
-    println!("deals: {:?}", deals);
-
     // Verify datacap allocations.
     let mut market_state: fil_actor_market::State =
         w.find_actor_state(STORAGE_MARKET_ACTOR_ID).unwrap().unwrap();
@@ -121,8 +119,6 @@ fn batch_onboarding_deals() {
         .get_pending_deal_allocation_ids(&DynBlockstore::new(w.store()), &deal_keys)
         .unwrap();
     assert_eq!(BATCH_SIZE, alloc_ids.len());
-
-    println!("alloc_ids: {:?}", alloc_ids);
 
     // Associate deals with sectors.
     let sector_precommit_data = deals

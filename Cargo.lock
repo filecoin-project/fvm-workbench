@@ -1058,6 +1058,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_account"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "fil_actors_runtime",
@@ -1093,6 +1094,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_cron"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1107,6 +1109,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_datacap"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "cid",
  "fil_actors_runtime",
@@ -1127,6 +1130,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_eam"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1148,6 +1152,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_ethaccount"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "fil_actors_runtime",
  "frc42_dispatch",
@@ -1163,6 +1168,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_evm"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1187,6 +1193,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_init"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1205,6 +1212,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_market"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1227,6 +1235,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_miner"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1251,6 +1260,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_multisig"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1271,6 +1281,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_paych"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1287,10 +1298,12 @@ dependencies = [
 [[package]]
 name = "fil_actor_placeholder"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 
 [[package]]
 name = "fil_actor_power"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1312,6 +1325,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_reward"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1327,6 +1341,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_system"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1342,6 +1357,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_verifreg"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "cid",
@@ -1363,6 +1379,7 @@ dependencies = [
 [[package]]
 name = "fil_actors_evm_shared"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_encoding",
@@ -1375,6 +1392,7 @@ dependencies = [
 [[package]]
 name = "fil_actors_runtime"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1405,6 +1423,7 @@ dependencies = [
 [[package]]
 name = "fil_builtin_actors_bundle"
 version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=alexytsu/pca-improvements-batching#78029ed6761ace122580b6bf3c0d712a0efdb36d"
 dependencies = [
  "cid",
  "clap",
