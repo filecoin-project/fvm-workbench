@@ -10,6 +10,7 @@ use fvm::kernel::{
 use fvm::{DefaultKernel, Kernel};
 use fvm_shared::address::{Address, SECP_PUB_LEN};
 use fvm_shared::clock::ChainEpoch;
+use fvm_shared::commcid::FIL_COMMITMENT_UNSEALED;
 use fvm_shared::consensus::ConsensusFault;
 use fvm_shared::crypto::signature::{SignatureType, SECP_SIG_LEN, SECP_SIG_MESSAGE_HASH_SIZE};
 use fvm_shared::econ::TokenAmount;
@@ -25,19 +26,52 @@ use fvm_shared::sys::out::vm::MessageContext;
 use fvm_shared::sys::SendFlags;
 use fvm_shared::{ActorID, MethodNum};
 
-use multihash::MultihashGeneric;
+use multihash::derive::Multihash;
+use multihash::{MultihashDigest, MultihashGeneric};
 
 pub const TEST_VM_RAND_ARRAY: [u8; 32] = [
     1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32,
 ];
 
-pub type Result<T> = std::result::Result<T, ExecutionError>;
+// TODO: extend test configuration to allow dynamic toggling for certain features to be intercepted
+// and the behaviour once intercepted
+// https://github.com/anorth/fvm-workbench/issues/9
+#[derive(Debug, Clone)]
+pub struct KernelConfiguration {
+    unsealed_sector_cid: Option<Cid>,
+}
+
+pub type ExecutionResult<T> = std::result::Result<T, ExecutionError>;
 
 /// A BenchKernel wraps a default kernel, delegating most functionality to it but intercepting certain
 /// methods to return static data.
 pub struct BenchKernel<C: CallManager> {
     inner_kernel: DefaultKernel<C>,
+    kernel_overrides: KernelConfiguration,
+}
+
+pub fn make_cid(input: &[u8], prefix: u64, hash: MhCode) -> Cid {
+    let hash = hash.digest(input);
+    Cid::new_v1(prefix, hash)
+}
+
+pub fn make_cid_sha(input: &[u8], prefix: u64) -> Cid {
+    make_cid(input, prefix, MhCode::Sha256TruncPaddedFake)
+}
+
+pub fn make_piece_cid(input: &[u8]) -> Cid {
+    make_cid_sha(input, FIL_COMMITMENT_UNSEALED)
+}
+
+// multihash library doesn't support poseidon hashing, so we fake it
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Multihash)]
+#[mh(alloc_size = 64)]
+pub enum MhCode {
+    #[mh(code = 0xb401, hasher = multihash::Sha2_256)]
+    PoseidonFake,
+    #[mh(code = 0x1012, hasher = multihash::Sha2_256)]
+    Sha256TruncPaddedFake,
 }
 
 impl<C> Kernel for BenchKernel<C>
@@ -75,6 +109,12 @@ where
                 value_received,
                 read_only,
             ),
+            kernel_overrides: KernelConfiguration {
+                // We don't actually control when a new Kernel is constructed so we can't pass this value in dynamically
+                // TODO: establish a pattern for intercepting Kernel behaviour in a more dynamic way
+                // https://github.com/anorth/fvm-workbench/issues/9
+                unsealed_sector_cid: Some(make_piece_cid(b"test data")),
+            },
         }
     }
 
@@ -100,15 +140,15 @@ impl<C> ActorOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn resolve_address(&self, address: &Address) -> Result<ActorID> {
+    fn resolve_address(&self, address: &Address) -> ExecutionResult<ActorID> {
         self.inner_kernel.resolve_address(address)
     }
 
-    fn get_actor_code_cid(&self, id: ActorID) -> Result<Cid> {
+    fn get_actor_code_cid(&self, id: ActorID) -> ExecutionResult<Cid> {
         self.inner_kernel.get_actor_code_cid(id)
     }
 
-    fn next_actor_address(&self) -> Result<Address> {
+    fn next_actor_address(&self) -> ExecutionResult<Address> {
         self.inner_kernel.next_actor_address()
     }
 
@@ -117,23 +157,23 @@ where
         code_id: Cid,
         actor_id: ActorID,
         delegated_address: Option<Address>,
-    ) -> Result<()> {
+    ) -> ExecutionResult<()> {
         self.inner_kernel.create_actor(code_id, actor_id, delegated_address)
     }
 
-    fn get_builtin_actor_type(&self, code_cid: &Cid) -> Result<u32> {
+    fn get_builtin_actor_type(&self, code_cid: &Cid) -> ExecutionResult<u32> {
         self.inner_kernel.get_builtin_actor_type(code_cid)
     }
 
-    fn get_code_cid_for_type(&self, typ: u32) -> Result<Cid> {
+    fn get_code_cid_for_type(&self, typ: u32) -> ExecutionResult<Cid> {
         self.inner_kernel.get_code_cid_for_type(typ)
     }
 
-    fn balance_of(&self, actor_id: ActorID) -> Result<TokenAmount> {
+    fn balance_of(&self, actor_id: ActorID) -> ExecutionResult<TokenAmount> {
         self.inner_kernel.balance_of(actor_id)
     }
 
-    fn lookup_delegated_address(&self, actor_id: ActorID) -> Result<Option<Address>> {
+    fn lookup_delegated_address(&self, actor_id: ActorID) -> ExecutionResult<Option<Address>> {
         self.inner_kernel.lookup_delegated_address(actor_id)
     }
 }
@@ -147,19 +187,19 @@ where
         self.inner_kernel.block_open(cid)
     }
 
-    fn block_create(&mut self, codec: u64, data: &[u8]) -> Result<BlockId> {
+    fn block_create(&mut self, codec: u64, data: &[u8]) -> ExecutionResult<BlockId> {
         self.inner_kernel.block_create(codec, data)
     }
 
-    fn block_link(&mut self, id: BlockId, hash_fun: u64, hash_len: u32) -> Result<Cid> {
+    fn block_link(&mut self, id: BlockId, hash_fun: u64, hash_len: u32) -> ExecutionResult<Cid> {
         self.inner_kernel.block_link(id, hash_fun, hash_len)
     }
 
-    fn block_read(&self, id: BlockId, offset: u32, buf: &mut [u8]) -> Result<i32> {
+    fn block_read(&self, id: BlockId, offset: u32, buf: &mut [u8]) -> ExecutionResult<i32> {
         self.inner_kernel.block_read(id, offset, buf)
     }
 
-    fn block_stat(&self, id: BlockId) -> Result<BlockStat> {
+    fn block_stat(&self, id: BlockId) -> ExecutionResult<BlockStat> {
         self.inner_kernel.block_stat(id)
     }
 }
@@ -169,7 +209,7 @@ impl<C> CircSupplyOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn total_fil_circ_supply(&self) -> Result<TokenAmount> {
+    fn total_fil_circ_supply(&self) -> ExecutionResult<TokenAmount> {
         self.inner_kernel.total_fil_circ_supply()
     }
 }
@@ -180,28 +220,40 @@ where
     C: CallManager,
 {
     // forwarded
-    fn hash(&self, code: u64, data: &[u8]) -> Result<MultihashGeneric<64>> {
+    fn hash(&self, code: u64, data: &[u8]) -> ExecutionResult<MultihashGeneric<64>> {
         self.inner_kernel.hash(code, data)
     }
 
-    // forwarded
+    // NOT forwarded - returns a static cid
     fn compute_unsealed_sector_cid(
         &self,
         proof_type: RegisteredSealProof,
         pieces: &[PieceInfo],
-    ) -> Result<Cid> {
-        self.inner_kernel.compute_unsealed_sector_cid(proof_type, pieces)
+    ) -> ExecutionResult<Cid> {
+        let charge =
+            self.inner_kernel.price_list().on_compute_unsealed_sector_cid(proof_type, pieces);
+        let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
+        self.kernel_overrides
+            .unsealed_sector_cid
+            .ok_or(ExecutionError::Fatal(anyhow::format_err!("unsealed sector cid not set")))
     }
 
-    // forwarded
+    // NOT forwarded - treats signatures that match plaintext as valid
     fn verify_signature(
         &self,
         sig_type: SignatureType,
         signature: &[u8],
-        signer: &Address,
+        _signer: &Address,
         plaintext: &[u8],
-    ) -> Result<bool> {
-        self.inner_kernel.verify_signature(sig_type, signature, signer, plaintext)
+    ) -> ExecutionResult<bool> {
+        let charge = self.inner_kernel.price_list().on_verify_signature(sig_type, signature.len());
+        let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
+        if signature != plaintext {
+            return Err(ExecutionError::Fatal(anyhow::format_err!(
+                "invalid signature (mock sig validation expects siggy bytes to be equal to plaintext)"
+            )));
+        }
+        Ok(true)
     }
 
     // forwarded
@@ -209,12 +261,12 @@ where
         &self,
         hash: &[u8; SECP_SIG_MESSAGE_HASH_SIZE],
         signature: &[u8; SECP_SIG_LEN],
-    ) -> Result<[u8; SECP_PUB_LEN]> {
+    ) -> ExecutionResult<[u8; SECP_PUB_LEN]> {
         self.inner_kernel.recover_secp_public_key(hash, signature)
     }
 
     // NOT forwarded - verifications always succeed
-    fn batch_verify_seals(&self, vis: &[SealVerifyInfo]) -> Result<Vec<bool>> {
+    fn batch_verify_seals(&self, vis: &[SealVerifyInfo]) -> ExecutionResult<Vec<bool>> {
         for vi in vis {
             let charge = self.inner_kernel.price_list().on_verify_seal(vi);
             let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
@@ -223,14 +275,14 @@ where
     }
 
     // NOT forwarded - verification always succeeds
-    fn verify_seal(&self, vi: &SealVerifyInfo) -> Result<bool> {
+    fn verify_seal(&self, vi: &SealVerifyInfo) -> ExecutionResult<bool> {
         let charge = self.inner_kernel.price_list().on_verify_seal(vi);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 
     // NOT forwarded - verification always succeeds
-    fn verify_post(&self, vi: &WindowPoStVerifyInfo) -> Result<bool> {
+    fn verify_post(&self, vi: &WindowPoStVerifyInfo) -> ExecutionResult<bool> {
         let charge = self.inner_kernel.price_list().on_verify_post(vi);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
@@ -242,7 +294,7 @@ where
         h1: &[u8],
         h2: &[u8],
         extra: &[u8],
-    ) -> Result<Option<ConsensusFault>> {
+    ) -> ExecutionResult<Option<ConsensusFault>> {
         let charge = self.inner_kernel.price_list().on_verify_consensus_fault(
             h1.len(),
             h2.len(),
@@ -252,15 +304,18 @@ where
         Ok(None)
     }
 
-    // NOT forwarded - all proofs are verified
-    fn verify_aggregate_seals(&self, agg: &AggregateSealVerifyProofAndInfos) -> Result<bool> {
+    // NOT forwarded - all proofs are valid
+    fn verify_aggregate_seals(
+        &self,
+        agg: &AggregateSealVerifyProofAndInfos,
+    ) -> ExecutionResult<bool> {
         let charge = self.inner_kernel.price_list().on_verify_aggregate_seals(agg);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
     }
 
     // NOT forwarded - all replicas are verified
-    fn verify_replica_update(&self, rep: &ReplicaUpdateInfo) -> Result<bool> {
+    fn verify_replica_update(&self, rep: &ReplicaUpdateInfo) -> ExecutionResult<bool> {
         let charge = self.inner_kernel.price_list().on_verify_replica_update(rep);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(true)
@@ -280,7 +335,7 @@ where
         self.inner_kernel.debug_enabled()
     }
 
-    fn store_artifact(&self, name: &str, data: &[u8]) -> Result<()> {
+    fn store_artifact(&self, name: &str, data: &[u8]) -> ExecutionResult<()> {
         self.inner_kernel.store_artifact(name, data)
     }
 }
@@ -294,7 +349,7 @@ where
         self.inner_kernel.gas_used()
     }
 
-    fn charge_gas(&self, name: &str, compute: Gas) -> Result<GasTimer> {
+    fn charge_gas(&self, name: &str, compute: Gas) -> ExecutionResult<GasTimer> {
         self.inner_kernel.charge_gas(name, compute)
     }
 
@@ -312,7 +367,7 @@ impl<C> MessageOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn msg_context(&self) -> Result<MessageContext> {
+    fn msg_context(&self) -> ExecutionResult<MessageContext> {
         self.inner_kernel.msg_context()
     }
 }
@@ -322,11 +377,11 @@ impl<C> NetworkOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn network_context(&self) -> Result<NetworkContext> {
+    fn network_context(&self) -> ExecutionResult<NetworkContext> {
         self.inner_kernel.network_context()
     }
 
-    fn tipset_cid(&self, epoch: ChainEpoch) -> Result<Cid> {
+    fn tipset_cid(&self, epoch: ChainEpoch) -> ExecutionResult<Cid> {
         self.inner_kernel.tipset_cid(epoch)
     }
 }
@@ -336,12 +391,13 @@ where
     C: CallManager,
 {
     // NOT forwarded
+    // TODO: perhaps should be implemented via faking externs https://github.com/anorth/fvm-workbench/issues/10
     fn get_randomness_from_tickets(
         &self,
         _personalization: i64,
         _rand_epoch: ChainEpoch,
         entropy: &[u8],
-    ) -> Result<[u8; RANDOMNESS_LENGTH]> {
+    ) -> ExecutionResult<[u8; RANDOMNESS_LENGTH]> {
         let charge = self.inner_kernel.price_list().on_get_randomness(entropy.len());
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         Ok(TEST_VM_RAND_ARRAY)
@@ -352,7 +408,7 @@ where
         personalization: i64,
         rand_epoch: ChainEpoch,
         entropy: &[u8],
-    ) -> Result<[u8; RANDOMNESS_LENGTH]> {
+    ) -> ExecutionResult<[u8; RANDOMNESS_LENGTH]> {
         self.inner_kernel.get_randomness_from_beacon(personalization, rand_epoch, entropy)
     }
 }
@@ -362,19 +418,19 @@ impl<C> SelfOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn root(&self) -> Result<Cid> {
+    fn root(&self) -> ExecutionResult<Cid> {
         self.inner_kernel.root()
     }
 
-    fn set_root(&mut self, root: Cid) -> Result<()> {
+    fn set_root(&mut self, root: Cid) -> ExecutionResult<()> {
         self.inner_kernel.set_root(root)
     }
 
-    fn current_balance(&self) -> Result<TokenAmount> {
+    fn current_balance(&self) -> ExecutionResult<TokenAmount> {
         self.inner_kernel.current_balance()
     }
 
-    fn self_destruct(&mut self, beneficiary: &Address) -> Result<()> {
+    fn self_destruct(&mut self, beneficiary: &Address) -> ExecutionResult<()> {
         self.inner_kernel.self_destruct(beneficiary)
     }
 }
@@ -384,7 +440,7 @@ impl<C> EventOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn emit_event(&mut self, raw_evt: &[u8]) -> Result<()> {
+    fn emit_event(&mut self, raw_evt: &[u8]) -> ExecutionResult<()> {
         self.inner_kernel.emit_event(raw_evt)
     }
 }
