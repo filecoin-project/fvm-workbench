@@ -11,7 +11,9 @@ use fil_actor_miner::{
 use fil_actors_runtime::runtime::Policy;
 use fil_actors_runtime::util::cbor::serialize;
 use fvm_ipld_bitfield::BitField;
+use fvm_ipld_encoding::ipld_block::IpldBlock;
 use fvm_ipld_encoding::ser;
+use fvm_ipld_encoding::serde::Serialize;
 use fvm_shared::address::{Address, Protocol};
 use fvm_shared::clock::{ChainEpoch, QuantSpec};
 use fvm_shared::commcid::{FIL_COMMITMENT_SEALED, FIL_COMMITMENT_UNSEALED};
@@ -29,6 +31,7 @@ use multihash::MultihashDigest;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
+pub mod deals;
 pub mod hookup;
 pub mod workflows;
 
@@ -267,4 +270,9 @@ pub fn get_miner_balance(w: &mut ExecutionWrangler, miner_id: ActorID) -> MinerB
 pub struct PrecommitMetadata {
     pub deals: Vec<DealID>,
     pub commd: CompactCommD,
+}
+
+/// Convenience function to create an IpldBlock from a serializable object
+pub fn serialize_ok<S: Serialize>(s: &S) -> IpldBlock {
+    IpldBlock::serialize_cbor(s).unwrap().unwrap()
 }
