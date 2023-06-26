@@ -266,6 +266,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bimap"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "230c5f1ca6a325a32553f8640d31ac9b49f2411e901e427570154868b46da4f7"
+
+[[package]]
 name = "bincode"
 version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -939,12 +945,25 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "env_logger"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
+dependencies = [
+ "atty",
+ "humantime 1.3.0",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
+name = "env_logger"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
 dependencies = [
  "atty",
- "humantime",
+ "humantime 2.1.0",
  "log",
  "regex",
  "termcolor",
@@ -1058,7 +1077,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_account"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "fil_actors_runtime",
@@ -1094,7 +1113,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_cron"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1109,7 +1128,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_datacap"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "cid",
  "fil_actors_runtime",
@@ -1130,7 +1149,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_eam"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1152,7 +1171,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_ethaccount"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "fil_actors_runtime",
  "frc42_dispatch",
@@ -1168,7 +1187,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_evm"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1193,7 +1212,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_init"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1212,7 +1231,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_market"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1235,7 +1254,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_miner"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1260,7 +1279,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_multisig"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1281,7 +1300,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_paych"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1298,12 +1317,12 @@ dependencies = [
 [[package]]
 name = "fil_actor_placeholder"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 
 [[package]]
 name = "fil_actor_power"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1325,7 +1344,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_reward"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore",
@@ -1341,7 +1360,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_system"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1357,7 +1376,7 @@ dependencies = [
 [[package]]
 name = "fil_actor_verifreg"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
  "cid",
@@ -1379,7 +1398,7 @@ dependencies = [
 [[package]]
 name = "fil_actors_evm_shared"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_encoding",
@@ -1392,9 +1411,10 @@ dependencies = [
 [[package]]
 name = "fil_actors_runtime"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "anyhow",
+ "blake2b_simd",
  "byteorder",
  "castaway",
  "cid",
@@ -1405,13 +1425,18 @@ dependencies = [
  "fvm_ipld_hamt",
  "fvm_sdk",
  "fvm_shared",
+ "hex",
  "itertools 0.10.5",
+ "lazy_static",
+ "libsecp256k1",
  "log",
  "multihash",
  "num",
  "num-derive",
  "num-traits",
  "paste",
+ "pretty_env_logger",
+ "rand",
  "regex",
  "serde",
  "serde_repr",
@@ -1423,7 +1448,7 @@ dependencies = [
 [[package]]
 name = "fil_builtin_actors_bundle"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=622b7079b8641dc674a3a961ae07a9f945bcba71#622b7079b8641dc674a3a961ae07a9f945bcba71"
+source = "git+https://github.com/filecoin-project/builtin-actors?branch=master#b712d1ed4ad6f6da57916caaed8af209daaf4db4"
 dependencies = [
  "cid",
  "clap",
@@ -1812,7 +1837,10 @@ name = "fvm-workbench-api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bimap",
+ "blake2b_simd",
  "cid",
+ "fil_actors_runtime",
  "fvm_ipld_amt",
  "fvm_ipld_blockstore",
  "fvm_ipld_car",
@@ -1832,7 +1860,7 @@ dependencies = [
  "blake2b_simd",
  "bls-signatures",
  "cid",
- "env_logger",
+ "env_logger 0.8.4",
  "fil_actor_account",
  "fil_actor_cron",
  "fil_actor_datacap",
@@ -2203,6 +2231,15 @@ dependencies = [
  "digest 0.9.0",
  "generic-array",
  "hmac",
+]
+
+[[package]]
+name = "humantime"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df004cfca50ef23c36850aaaa59ad52cc70d0e90243c3c7737a4dd32dc7a3c4f"
+dependencies = [
+ "quick-error",
 ]
 
 [[package]]
@@ -2853,6 +2890,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pretty_env_logger"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
+dependencies = [
+ "env_logger 0.7.1",
+ "log",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2903,6 +2950,12 @@ checksum = "5787f7cda34e3033a72192c018bc5883100330f362ef279a8cbccfce8bb4e874"
 dependencies = [
  "cc",
 ]
+
+[[package]]
+name = "quick-error"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quote"

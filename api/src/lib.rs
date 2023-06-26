@@ -7,6 +7,7 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::receipt::Receipt;
 use fvm_shared::ActorID;
+use wrangler::Actor;
 
 use crate::trace::ExecutionTrace;
 
@@ -69,10 +70,16 @@ pub trait Bench {
     fn store(&self) -> &dyn Blockstore;
     /// Looks up a top-level actor state object in the VM.
     /// Returns None if no such actor is found.
-    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>>;
+    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<Actor>>;
     /// Resolves an address to an actor ID.
     /// Returns None if the address cannot be resolved.
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
+
+    /// Get the root cid of the state tree
+    fn state_root(&mut self) -> Cid;
+
+    /// Get the total amount of FIL in circulation
+    fn total_fil(&self) -> TokenAmount;
 }
 
 /// The result of a message execution.
@@ -94,16 +101,4 @@ pub struct ExecutionResult {
     /// Execution trace information, for debugging.
     pub trace: ExecutionTrace,
     pub message: String,
-}
-
-/// An actor root state object.
-pub struct ActorState {
-    /// Link to code for the actor.
-    pub code: Cid,
-    /// Link to the state of the actor.
-    pub state: Cid,
-    /// Sequence of the actor.
-    pub sequence: u64,
-    /// Tokens available to the actor.
-    pub balance: TokenAmount,
 }

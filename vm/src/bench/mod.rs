@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 
+use cid::Cid;
 use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
@@ -8,11 +9,13 @@ use fvm::trace::ExecutionEvent;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
+use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
 use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
 use fvm_workbench_api::trace::ExecutionTrace;
-use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
+use fvm_workbench_api::wrangler::Actor;
+use fvm_workbench_api::{Bench, ExecutionResult};
 
 use crate::externs::FakeExterns;
 
@@ -64,17 +67,18 @@ where
         self.executor.blockstore()
     }
 
-    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
+    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<Actor>> {
         let raw = self
             .executor
             .state_tree()
             .get_actor(id)
             .map_err(|e| anyhow!("failed to load actor {}: {}", id, e.to_string()))?;
-        Ok(raw.map(|a| ActorState {
+        Ok(raw.map(|a| Actor {
             code: a.code,
-            state: a.state,
-            sequence: a.sequence,
+            head: a.state,
+            call_seq_num: a.sequence,
             balance: a.balance,
+            predictable_address: Some(Address::new_id(id)),
         }))
     }
 
@@ -116,6 +120,15 @@ where
             )
             .unwrap()
         });
+    }
+
+    fn state_root(&mut self) -> Cid {
+        // TODO: get the state root without flushing?
+        self.executor.state_tree_mut().flush().unwrap()
+    }
+
+    fn total_fil(&self) -> TokenAmount {
+        self.executor.context().circ_supply.clone()
     }
 }
 
