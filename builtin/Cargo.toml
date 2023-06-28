@@ -35,6 +35,7 @@ fvm_ipld_car = { version = "~0.6.0"}
 fvm_ipld_blockstore = { version = "~0.1.1"}
 fvm_ipld_encoding = "0.3.3"
 fvm_ipld_bitfield = { version = "~0.5.2"}
+fvm_actor_utils = "6.0.0"
 
 # Used directly in some tests
 frc46_token = "6.0.0"
