@@ -9,10 +9,12 @@ use fil_actor_miner::{
     SectorPreCommitInfo, State as MinerState,
 };
 use fil_actors_runtime::runtime::Policy;
-use fil_actors_runtime::util::cbor::serialize;
 use fvm_ipld_bitfield::BitField;
-use fvm_ipld_encoding::ser;
-use fvm_shared::address::{Address, Protocol};
+use fvm_ipld_encoding::de::DeserializeOwned;
+use fvm_ipld_encoding::ipld_block::IpldBlock;
+use fvm_ipld_encoding::serde::Serialize;
+use fvm_ipld_encoding::RawBytes;
+use fvm_shared::address::{Address, Protocol, FIRST_NON_SINGLETON_ADDR};
 use fvm_shared::clock::{ChainEpoch, QuantSpec};
 use fvm_shared::commcid::{FIL_COMMITMENT_SEALED, FIL_COMMITMENT_UNSEALED};
 use fvm_shared::crypto::signature::Signature;
@@ -22,47 +24,75 @@ use fvm_shared::error::ExitCode;
 use fvm_shared::sector::{RegisteredSealProof, SectorNumber};
 use fvm_shared::{ActorID, MethodNum};
 use fvm_workbench_api::blockstore::DynBlockstore;
-use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::ExecutionResult;
+use fvm_workbench_api::wrangler::VM;
 use multihash::derive::Multihash;
 use multihash::MultihashDigest;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
+pub mod deals;
 pub mod hookup;
 pub mod workflows;
 
-pub fn apply_ok<T: ser::Serialize + ?Sized>(
-    w: &mut ExecutionWrangler,
-    from: Address,
-    to: Address,
-    value: TokenAmount,
+// accounts for verifreg root signer and msig
+// pub const VERIFREG_ROOT_KEY: &[u8] = &[200; fvm_shared::address::BLS_PUB_LEN];
+pub const TEST_VERIFREG_ROOT_SIGNER_ADDR: Address = Address::new_id(FIRST_NON_SINGLETON_ADDR);
+pub const TEST_VERIFREG_ROOT_ADDR: Address = Address::new_id(FIRST_NON_SINGLETON_ADDR + 1);
+// account actor seeding funds created by new_with_singletons
+// pub const FAUCET_ROOT_KEY: &[u8] = &[153; fvm_shared::address::BLS_PUB_LEN];
+pub const TEST_FAUCET_ADDR: Address = Address::new_id(FIRST_NON_SINGLETON_ADDR - 2); // TODO: this should be dynamically read from genesis not hardcoded
+pub const FIRST_TEST_USER_ADDR: ActorID = FIRST_NON_SINGLETON_ADDR + 2;
+
+pub fn apply_ok<S: Serialize>(
+    v: &mut dyn VM,
+    from: &Address,
+    to: &Address,
+    value: &TokenAmount,
     method: MethodNum,
-    params: &T,
-) -> anyhow::Result<ExecutionResult> {
-    apply_code(w, from, to, value, method, params, ExitCode::OK)
+    params: Option<S>,
+) -> RawBytes {
+    apply_code(v, from, to, value, method, params, ExitCode::OK)
 }
 
-pub fn apply_code<T: ser::Serialize + ?Sized>(
-    w: &mut ExecutionWrangler,
-    from: Address,
-    to: Address,
-    value: TokenAmount,
+pub fn apply_code<S: Serialize>(
+    v: &mut dyn VM,
+    from: &Address,
+    to: &Address,
+    value: &TokenAmount,
     method: MethodNum,
-    params: &T,
+    params: Option<S>,
     code: ExitCode,
-) -> anyhow::Result<ExecutionResult> {
-    // Implicit execution is used because tests often trigger messages from non-account actors.
-    let ret = w.execute_implicit(from, to, method, serialize(params, "params").unwrap(), value)?;
-    if ret.receipt.exit_code != code {
-        println!("{}", ret.trace.format());
-    }
-    assert_eq!(
-        code, ret.receipt.exit_code,
-        "expected code {}, got {} ({})",
-        code, ret.receipt.exit_code, ret.message
-    );
-    Ok(ret)
+) -> RawBytes {
+    let params = params.map(|p| IpldBlock::serialize_cbor(&p).unwrap().unwrap());
+    let res = v.execute_message(from, to, value, method, params).unwrap();
+    assert_eq!(code, res.code, "expected code {}, got {} ({})", code, res.code, res.message);
+    res.ret.map_or(RawBytes::default(), |b| RawBytes::new(b.data))
+}
+
+pub fn apply_ok_implicit<S: Serialize>(
+    v: &mut dyn VM,
+    from: &Address,
+    to: &Address,
+    value: &TokenAmount,
+    method: MethodNum,
+    params: Option<S>,
+) -> RawBytes {
+    apply_code_implicit(v, from, to, value, method, params, ExitCode::OK)
+}
+
+pub fn apply_code_implicit<S: Serialize>(
+    v: &mut dyn VM,
+    from: &Address,
+    to: &Address,
+    value: &TokenAmount,
+    method: MethodNum,
+    params: Option<S>,
+    code: ExitCode,
+) -> RawBytes {
+    let params = params.map(|p| IpldBlock::serialize_cbor(&p).unwrap().unwrap());
+    let res = v.execute_message_implicit(from, to, value, method, params).unwrap();
+    assert_eq!(code, res.code, "expected code {}, got {} ({})", code, res.code, res.message);
+    res.ret.map_or(RawBytes::default(), |b| RawBytes::new(b.data))
 }
 
 /// A crypto-key backed account, including the secret key.
@@ -228,16 +258,19 @@ pub fn make_bitfield(bits: &[u64]) -> BitField {
     BitField::try_from_bits(bits.iter().copied()).unwrap()
 }
 
-pub fn sector_deadline(w: &mut ExecutionWrangler, m: &Address, s: SectorNumber) -> (u64, u64) {
-    let m = w.resolve_address(m).unwrap().unwrap();
-    let st: MinerState = w.find_actor_state(m).unwrap().unwrap();
-    st.find_sector(&Policy::default(), &DynBlockstore::new(w.store()), s).unwrap()
+pub fn miner_dline_info(v: &dyn VM, m: &Address) -> DeadlineInfo {
+    let st: MinerState = get_state(v, m).unwrap();
+    new_deadline_info_from_offset_and_epoch(&Policy::default(), st.proving_period_start, v.epoch())
 }
 
-pub fn miner_dline_info(w: &mut ExecutionWrangler, maddr: &Address) -> DeadlineInfo {
-    let m_id = w.resolve_address(maddr).unwrap().unwrap();
-    let st: MinerState = w.find_actor_state(m_id).unwrap().unwrap();
-    new_deadline_info_from_offset_and_epoch(&Policy::default(), st.proving_period_start, w.epoch())
+pub fn sector_deadline(v: &dyn VM, m: &Address, s: SectorNumber) -> (u64, u64) {
+    let st: MinerState = get_state(v, m).unwrap();
+    st.find_sector(&Policy::default(), &DynBlockstore::new(v.blockstore()), s).unwrap()
+}
+
+pub fn get_state<T: DeserializeOwned>(v: &dyn VM, a: &Address) -> Option<T> {
+    let cid = v.actor_root(a).unwrap();
+    v.blockstore().get(&cid).unwrap().map(|slice| fvm_ipld_encoding::from_slice(&slice).unwrap())
 }
 
 pub fn new_deadline_info_from_offset_and_epoch(
@@ -252,17 +285,47 @@ pub fn new_deadline_info_from_offset_and_epoch(
         % policy.wpost_period_deadlines;
     new_deadline_info(policy, current_period_start, current_deadline_idx, current_epoch)
 }
-
-pub fn get_miner_balance(w: &mut ExecutionWrangler, miner_id: ActorID) -> MinerBalances {
-    let a = w.find_actor(miner_id).unwrap().unwrap();
-    let st: MinerState = w.find_actor_state(miner_id).unwrap().unwrap();
+pub fn miner_balance(v: &dyn VM, m: &Address) -> MinerBalances {
+    let st: MinerState = get_state(v, m).unwrap();
     MinerBalances {
-        available_balance: st.get_available_balance(&a.balance).unwrap(),
+        available_balance: st.get_available_balance(&v.balance(m)).unwrap(),
         vesting_balance: st.locked_funds,
         initial_pledge: st.initial_pledge,
         pre_commit_deposit: st.pre_commit_deposits,
     }
 }
+
+/// Convenience function to create an IpldBlock from a serializable object
+pub fn serialize_ok<S: Serialize>(s: &S) -> IpldBlock {
+    IpldBlock::serialize_cbor(s).unwrap().unwrap()
+}
+
+// pub fn get_network_stats<BS: Blockstore>(vm: &dyn VM<BS>) -> NetworkStats {
+//     let power_state: PowerState = get_state(vm, &STORAGE_POWER_ACTOR_ADDR).unwrap();
+//     let reward_state: RewardState = get_state(vm, &REWARD_ACTOR_ADDR).unwrap();
+//     let market_state: MarketState = get_state(vm, &STORAGE_MARKET_ACTOR_ADDR).unwrap();
+
+//     NetworkStats {
+//         total_raw_byte_power: power_state.total_raw_byte_power,
+//         total_bytes_committed: power_state.total_bytes_committed,
+//         total_quality_adj_power: power_state.total_quality_adj_power,
+//         total_qa_bytes_committed: power_state.total_qa_bytes_committed,
+//         total_pledge_collateral: power_state.total_pledge_collateral,
+//         this_epoch_raw_byte_power: power_state.this_epoch_raw_byte_power,
+//         this_epoch_quality_adj_power: power_state.this_epoch_quality_adj_power,
+//         this_epoch_pledge_collateral: power_state.this_epoch_pledge_collateral,
+//         miner_count: power_state.miner_count,
+//         miner_above_min_power_count: power_state.miner_above_min_power_count,
+//         this_epoch_reward: reward_state.this_epoch_reward,
+//         this_epoch_reward_smoothed: reward_state.this_epoch_reward_smoothed,
+//         this_epoch_baseline_power: reward_state.this_epoch_baseline_power,
+//         total_storage_power_reward: reward_state.total_storage_power_reward,
+//         total_client_locked_collateral: market_state.total_client_locked_collateral,
+//         total_provider_locked_collateral: market_state.total_provider_locked_collateral,
+//         total_client_storage_fee: market_state.total_client_storage_fee,
+//     }
+// }
+
 #[derive(Debug, Clone)]
 pub struct PrecommitMetadata {
     pub deals: Vec<DealID>,

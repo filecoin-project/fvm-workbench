@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use bimap::BiBTreeMap;
 use cid::multihash::{Code, MultihashDigest};
 use cid::Cid;
+use fvm_sdk as fvm;
 use fvm_shared::crypto::signature::{
     Signature, SECP_PUB_LEN, SECP_SIG_LEN, SECP_SIG_MESSAGE_HASH_SIZE,
 };
@@ -185,11 +186,11 @@ impl<'b> VM for ExecutionWrangler<'b> {
 
     fn actor_root(&self, address: &Address) -> Option<Cid> {
         let maybe_address = self.resolve_address(address).ok()?;
-        let maybe_code = maybe_address.map(|id| {
+        let maybe_head = maybe_address.map(|id| {
             let maybe_actor = self.find_actor(id).ok().unwrap_or_default();
-            maybe_actor.map(|actor| actor.code)
+            maybe_actor.map(|actor| actor.head)
         });
-        maybe_code?
+        maybe_head?
     }
 
     fn epoch(&self) -> ChainEpoch {
@@ -220,6 +221,21 @@ impl<'b> VM for ExecutionWrangler<'b> {
     ) -> Result<MessageResult, TestVMError> {
         let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
         match self.execute(*from, *to, method, raw_params, value.clone()) {
+            Ok(res) => Ok(res.into()),
+            Err(e) => Err(TestVMError { msg: e.to_string() }),
+        }
+    }
+
+    fn execute_message_implicit(
+        &mut self,
+        from: &Address,
+        to: &Address,
+        value: &TokenAmount,
+        method: MethodNum,
+        params: Option<IpldBlock>,
+    ) -> Result<MessageResult, TestVMError> {
+        let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
+        match self.execute_implicit(*from, *to, method, raw_params, value.clone()) {
             Ok(res) => Ok(res.into()),
             Err(e) => Err(TestVMError { msg: e.to_string() }),
         }
@@ -339,6 +355,16 @@ pub trait VM {
         params: Option<IpldBlock>,
     ) -> Result<MessageResult, TestVMError>;
 
+    /// Send a message without charging gas
+    fn execute_message_implicit(
+        &mut self,
+        from: &Address,
+        to: &Address,
+        value: &TokenAmount,
+        method: MethodNum,
+        params: Option<IpldBlock>,
+    ) -> Result<MessageResult, TestVMError>;
+
     /// Sets the epoch to the specified value
     fn set_epoch(&mut self, epoch: ChainEpoch);
 
@@ -406,7 +432,7 @@ impl Primitives for FakePrimitives {
         _proof_type: RegisteredSealProof,
         _pieces: &[PieceInfo],
     ) -> Result<Cid, anyhow::Error> {
-        Ok(make_piece_cid(b"unsealed from itest vm"))
+        Ok(make_piece_cid(b"test data"))
     }
 
     fn verify_signature(

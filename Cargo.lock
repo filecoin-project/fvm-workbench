@@ -1846,6 +1846,7 @@ dependencies = [
  "fvm_ipld_car",
  "fvm_ipld_encoding",
  "fvm_ipld_hamt",
+ "fvm_sdk",
  "fvm_shared",
  "itertools 0.10.5",
  "num-format",
