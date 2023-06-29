@@ -51,10 +51,10 @@ fn batch_onboarding_deals() {
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);
     let _genesis = create_genesis_actors(&mut builder, &spec).unwrap();
-    let mut bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(&mut *bench, store);
+    let bench = builder.build().unwrap();
+    let w = ExecutionWrangler::new_default(bench, store);
 
-    batch_onboarding_deals_test(&mut w);
+    batch_onboarding_deals_test(&w);
 
     // let network_stats = get_network_stats(v);
     // assert_eq!(
@@ -66,7 +66,7 @@ fn batch_onboarding_deals() {
 }
 
 // Tests batch onboarding of sectors with verified deals.
-pub fn batch_onboarding_deals_test(v: &mut dyn VM) {
+pub fn batch_onboarding_deals_test(v: &dyn VM) {
     let deal_duration: ChainEpoch = Policy::default().min_sector_expiration;
     let sector_duration: ChainEpoch =
         deal_duration + Policy::default().market_default_allocation_term_buffer;
@@ -169,7 +169,7 @@ pub fn batch_onboarding_deals_test(v: &mut dyn VM) {
 }
 
 fn publish_deals(
-    v: &mut dyn VM,
+    v: &dyn VM,
     client: Address,
     provider: Address,
     worker: Address,
@@ -196,7 +196,7 @@ fn publish_deals(
 // the information necessary to check expectations of deal activation and FIL+ claims.
 // https://github.com/filecoin-project/builtin-actors/issues/1302
 pub fn prove_commit_aggregate(
-    v: &mut dyn VM,
+    v: &dyn VM,
     worker: &Address,
     maddr: &Address,
     precommits: Vec<SectorPreCommitOnChainInfo>,

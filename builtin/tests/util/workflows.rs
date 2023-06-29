@@ -46,12 +46,12 @@ fn new_bls_from_rng(rng: &mut ChaCha8Rng) -> Address {
 
 const ACCOUNT_SEED: u64 = 93837778;
 
-pub fn create_accounts(v: &mut dyn VM, count: u64, balance: &TokenAmount) -> Vec<Address> {
+pub fn create_accounts(v: &dyn VM, count: u64, balance: &TokenAmount) -> Vec<Address> {
     create_accounts_seeded(v, count, balance, ACCOUNT_SEED)
 }
 
 pub fn create_accounts_seeded(
-    v: &mut dyn VM,
+    v: &dyn VM,
     count: u64,
     balance: &TokenAmount,
     seed: u64,
@@ -66,7 +66,7 @@ pub fn create_accounts_seeded(
 }
 
 pub fn market_add_balance(
-    v: &mut dyn VM,
+    v: &dyn VM,
     sender: &Address,
     beneficiary: &Address,
     amount: &TokenAmount,
@@ -81,7 +81,7 @@ pub fn market_add_balance(
     );
 }
 pub fn create_miner(
-    v: &mut dyn VM,
+    v: &dyn VM,
     owner: &Address,
     worker: &Address,
     post_proof_type: RegisteredPoStProof,
@@ -114,7 +114,7 @@ pub fn create_miner(
     (res.id_address, res.robust_address)
 }
 
-pub fn verifreg_add_verifier(v: &mut dyn VM, verifier: &Address, data_cap: StoragePower) {
+pub fn verifreg_add_verifier(v: &dyn VM, verifier: &Address, data_cap: StoragePower) {
     let add_verifier_params = VerifierParams { address: *verifier, allowance: data_cap };
     // root address is msig, send proposal from root key
     let proposal = ProposeParams {
@@ -154,7 +154,7 @@ pub fn verifreg_add_verifier(v: &mut dyn VM, verifier: &Address, data_cap: Stora
 }
 
 pub fn verifreg_add_client(
-    v: &mut dyn VM,
+    v: &dyn VM,
     verifier: &Address,
     client: &Address,
     allowance: StoragePower,
@@ -203,7 +203,7 @@ pub fn verifreg_add_client(
 
 #[allow(clippy::too_many_arguments)]
 pub fn precommit_sectors(
-    w: &mut dyn VM,
+    w: &dyn VM,
     count: usize,
     batch_size: usize,
     worker: &Address,
@@ -230,7 +230,7 @@ pub fn precommit_sectors(
 
 #[allow(clippy::too_many_arguments)]
 pub fn precommit_sectors_v2(
-    v: &mut dyn VM,
+    v: &dyn VM,
     count: usize,
     batch_size: usize,
     metadata: Vec<PrecommitMetadata>, // Per-sector deal metadata, or empty vector for no deals.
@@ -403,7 +403,7 @@ pub fn precommit_sectors_v2(
 }
 
 pub fn submit_windowed_post(
-    v: &mut dyn VM,
+    v: &dyn VM,
     worker: &Address,
     maddr: &Address,
     dline_info: DeadlineInfo,
@@ -447,11 +447,7 @@ pub fn submit_windowed_post(
     // .matches(v.take_invocations().last().unwrap());
 }
 
-pub fn advance_by_deadline_to_epoch(
-    w: &mut dyn VM,
-    maddr: &Address,
-    e: ChainEpoch,
-) -> DeadlineInfo {
+pub fn advance_by_deadline_to_epoch(w: &dyn VM, maddr: &Address, e: ChainEpoch) -> DeadlineInfo {
     // keep advancing until the epoch of interest is within the deadline
     // if e is dline.last() == dline.close -1 cron is not run
     let dline_info = advance_by_deadline(w, maddr, |dline_info| dline_info.close < e);
@@ -459,7 +455,7 @@ pub fn advance_by_deadline_to_epoch(
     dline_info
 }
 
-fn advance_by_deadline<F>(v: &mut dyn VM, maddr: &Address, more: F) -> DeadlineInfo
+fn advance_by_deadline<F>(v: &dyn VM, maddr: &Address, more: F) -> DeadlineInfo
 where
     F: Fn(DeadlineInfo) -> bool,
 {
@@ -476,7 +472,7 @@ where
 }
 
 pub fn advance_to_proving_deadline(
-    v: &mut dyn VM,
+    v: &dyn VM,
     maddr: &Address,
     s: SectorNumber,
 ) -> (DeadlineInfo, u64) {
@@ -486,11 +482,11 @@ pub fn advance_to_proving_deadline(
     (dline_info, p)
 }
 
-pub fn advance_by_deadline_to_index(v: &mut dyn VM, maddr: &Address, i: u64) -> DeadlineInfo {
+pub fn advance_by_deadline_to_index(v: &dyn VM, maddr: &Address, i: u64) -> DeadlineInfo {
     advance_by_deadline(v, maddr, |dline_info| dline_info.index != i)
 }
 
-pub fn cron_tick(v: &mut dyn VM) {
+pub fn cron_tick(v: &dyn VM) {
     apply_ok_implicit(
         v,
         &SYSTEM_ACTOR_ADDR,

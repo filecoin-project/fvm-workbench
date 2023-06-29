@@ -19,7 +19,7 @@ use fil_actors_runtime::runtime::{Policy, Primitives};
 use fil_actors_runtime::test_utils::{make_piece_cid, recover_secp_public_key};
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
-use fvm_ipld_encoding::{de, from_slice, RawBytes};
+use fvm_ipld_encoding::RawBytes;
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
@@ -31,8 +31,8 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use crate::trace::InvocationTrace;
 pub use crate::{Bench, ExecutionResult};
 
-pub struct ExecutionWrangler<'b, BS: Blockstore> {
-    bench: &'b mut dyn Bench,
+pub struct ExecutionWrangler<BS: Blockstore> {
+    bench: RefCell<Box<dyn Bench>>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
@@ -44,12 +44,12 @@ pub struct ExecutionWrangler<'b, BS: Blockstore> {
     store: BS,
 }
 
-impl<'b, BS> ExecutionWrangler<'b, BS>
+impl<BS> ExecutionWrangler<BS>
 where
     BS: Blockstore,
 {
     pub fn new(
-        bench: &'b mut dyn Bench,
+        bench: Box<dyn Bench>,
         version: u64,
         gas_limit: u64,
         gas_fee_cap: TokenAmount,
@@ -58,7 +58,7 @@ where
         store: BS,
     ) -> Self {
         Self {
-            bench,
+            bench: RefCell::new(bench),
             version,
             gas_limit,
             gas_fee_cap,
@@ -71,7 +71,7 @@ where
         }
     }
 
-    pub fn new_default(bench: &'b mut dyn Bench, blockstore: BS) -> Self {
+    pub fn new_default(bench: Box<dyn Bench>, blockstore: BS) -> Self {
         Self::new(
             bench,
             0,
@@ -83,8 +83,10 @@ where
         )
     }
 
-    pub fn execute(
-        &mut self,
+    ///// Private helpers - functionality should be accessed via the VM trait /////
+
+    fn execute(
+        &self,
         from: Address,
         to: Address,
         method: MethodNum,
@@ -93,15 +95,15 @@ where
     ) -> anyhow::Result<ExecutionResult> {
         let sequence = *self.sequences.borrow().get(&from).unwrap_or(&0);
         let (msg, msg_length) = self.make_msg(from, to, method, params, value, sequence);
-        let ret = self.bench.execute(msg, msg_length);
+        let ret = self.bench.borrow_mut().execute(msg, msg_length);
         if ret.is_ok() {
             self.sequences.borrow_mut().insert(from, sequence + 1);
         }
         ret
     }
 
-    pub fn execute_implicit(
-        &mut self,
+    fn execute_implicit(
+        &self,
         from: Address,
         to: Address,
         method: MethodNum,
@@ -110,58 +112,46 @@ where
     ) -> anyhow::Result<ExecutionResult> {
         let sequence = *self.sequences.borrow().get(&from).unwrap_or(&0);
         let (msg, msg_length) = self.make_msg(from, to, method, params, value, sequence);
-        let ret = self.bench.execute_implicit(msg, msg_length);
+        let ret = self.bench.borrow_mut().execute_implicit(msg, msg_length);
         if ret.is_ok() {
             self.sequences.borrow_mut().insert(from, sequence + 1);
         }
         ret
     }
 
-    pub fn epoch(&self) -> ChainEpoch {
-        self.bench.epoch()
+    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<Actor>> {
+        self.bench.borrow().find_actor(id)
     }
 
-    pub fn set_epoch(&mut self, epoch: ChainEpoch) {
-        self.bench.set_epoch(epoch);
+    // pub fn find_actor_state<T: de::DeserializeOwned>(
+    //     &mut self,
+    //     id: ActorID,
+    // ) -> anyhow::Result<Option<T>> {
+    //     let actor = self.bench.borrow().find_actor(id)?;
+    //     Ok(match actor {
+    //         Some(actor) => {
+    //             let block = self
+    //                 .bench
+    //                 .borrow()
+    //                 .store()
+    //                 .get(&actor.code)
+    //                 .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
+
+    //             block
+    //                 .map(|s| {
+    //                     from_slice(&s)
+    //                         .map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
+    //                 })
+    //                 .transpose()?
+    //         }
+    //         None => None,
+    //     })
+    // }
+
+    fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
+        self.bench.borrow().resolve_address(addr)
     }
 
-    pub fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<Actor>> {
-        self.bench.find_actor(id)
-    }
-
-    pub fn find_actor_state<T: de::DeserializeOwned>(
-        &mut self,
-        id: ActorID,
-    ) -> anyhow::Result<Option<T>> {
-        let actor = self.bench.find_actor(id)?;
-        Ok(match actor {
-            Some(actor) => {
-                let block = self
-                    .bench
-                    .store()
-                    .get(&actor.code)
-                    .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
-
-                block
-                    .map(|s| {
-                        from_slice(&s)
-                            .map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
-                    })
-                    .transpose()?
-            }
-            None => None,
-        })
-    }
-
-    pub fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
-        self.bench.resolve_address(addr)
-    }
-
-    pub fn store(&self) -> &dyn Blockstore {
-        &self.store
-    }
-
-    ///// Private helpers /////
     fn make_msg(
         &self,
         from: Address,
@@ -192,17 +182,17 @@ where
     }
 }
 
-impl<'b, BS> VM for ExecutionWrangler<'b, BS>
+impl<BS> VM for ExecutionWrangler<BS>
 where
     BS: Blockstore,
 {
-    fn blockstore(&mut self) -> &dyn Blockstore {
+    fn blockstore(&self) -> &dyn Blockstore {
         // It's unfortunate that we need to call flush here everytime we need the blockstore reference
         // However, the state_tree inside Executor wraps whatever blockstore it's given with a BufferedBlockstore
         // Since the store held by the Wrangler was cloned prior to being wrapped in the BufferedBlockstore, it's possible
         // there are pending changes to the underlying blockstore held in the BufferedBlockstore's cache that are not
         // visible via our handle
-        self.bench.flush();
+        self.bench.borrow_mut().flush();
         &self.store
     }
 
@@ -216,7 +206,7 @@ where
     }
 
     fn epoch(&self) -> ChainEpoch {
-        self.bench.epoch()
+        self.bench.borrow().epoch()
     }
 
     fn balance(&self, address: &Address) -> TokenAmount {
@@ -234,7 +224,7 @@ where
     }
 
     fn execute_message(
-        &mut self,
+        &self,
         from: &Address,
         to: &Address,
         value: &TokenAmount,
@@ -249,7 +239,7 @@ where
     }
 
     fn execute_message_implicit(
-        &mut self,
+        &self,
         from: &Address,
         to: &Address,
         value: &TokenAmount,
@@ -263,8 +253,8 @@ where
         }
     }
 
-    fn set_epoch(&mut self, epoch: ChainEpoch) {
-        self.bench.set_epoch(epoch)
+    fn set_epoch(&self, epoch: ChainEpoch) {
+        self.bench.borrow_mut().set_epoch(epoch)
     }
 
     fn take_invocations(&self) -> Vec<InvocationTrace> {
@@ -272,8 +262,8 @@ where
     }
 
     fn actor(&self, address: &Address) -> Option<Actor> {
-        let id = self.bench.resolve_address(address).ok()??;
-        self.bench.find_actor(id).ok()?
+        let id = self.bench.borrow().resolve_address(address).ok()??;
+        self.bench.borrow().find_actor(id).ok()?
     }
 
     fn actor_manifest(&self) -> BiBTreeMap<Cid, Type> {
@@ -288,12 +278,12 @@ where
         Policy::default()
     }
 
-    fn state_root(&mut self) -> Cid {
-        self.bench.state_root()
+    fn state_root(&self) -> Cid {
+        self.bench.borrow_mut().state_root()
     }
 
     fn total_fil(&self) -> TokenAmount {
-        self.bench.total_fil()
+        self.bench.borrow().total_fil()
     }
 }
 
@@ -353,7 +343,7 @@ pub struct MessageResult {
 /// An abstract VM that is injected into integration tests
 pub trait VM {
     /// Returns the underlying blockstore of the VM
-    fn blockstore(&mut self) -> &dyn Blockstore;
+    fn blockstore(&self) -> &dyn Blockstore;
 
     /// Get the state root of the specified actor
     fn actor_root(&self, address: &Address) -> Option<Cid>;
@@ -369,7 +359,7 @@ pub trait VM {
 
     /// Send a message between the two specified actors
     fn execute_message(
-        &mut self,
+        &self,
         from: &Address,
         to: &Address,
         value: &TokenAmount,
@@ -379,7 +369,7 @@ pub trait VM {
 
     /// Send a message without charging gas
     fn execute_message_implicit(
-        &mut self,
+        &self,
         from: &Address,
         to: &Address,
         value: &TokenAmount,
@@ -388,7 +378,7 @@ pub trait VM {
     ) -> Result<MessageResult, TestVMError>;
 
     /// Sets the epoch to the specified value
-    fn set_epoch(&mut self, epoch: ChainEpoch);
+    fn set_epoch(&self, epoch: ChainEpoch);
 
     /// Take all the invocations that have been made since the last call to this method
     fn take_invocations(&self) -> Vec<InvocationTrace>;
@@ -406,7 +396,7 @@ pub trait VM {
     fn policy(&self) -> Policy;
 
     /// Get the root Cid of the state tree
-    fn state_root(&mut self) -> Cid;
+    fn state_root(&self) -> Cid;
 
     /// Get the total amount of FIL in circulation
     fn total_fil(&self) -> TokenAmount;

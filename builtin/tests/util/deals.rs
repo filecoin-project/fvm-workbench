@@ -46,14 +46,14 @@ impl Default for DealOptions {
 // Note that this doesn't check trace expectations,
 // see https://github.com/filecoin-project/builtin-actors/issues/1302.
 pub struct DealBatcher<'vm> {
-    v: &'vm mut dyn VM,
+    v: &'vm dyn VM,
     deals: Vec<DealProposal>,
     default_options: DealOptions,
     published: bool,
 }
 
 impl<'vm> DealBatcher<'vm> {
-    pub fn new(v: &'vm mut dyn VM, opts: DealOptions) -> Self {
+    pub fn new(v: &'vm dyn VM, opts: DealOptions) -> Self {
         DealBatcher { v, deals: vec![], default_options: opts, published: false }
     }
 

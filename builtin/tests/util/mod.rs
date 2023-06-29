@@ -44,7 +44,7 @@ pub const TEST_FAUCET_ADDR: Address = Address::new_id(FIRST_NON_SINGLETON_ADDR -
 pub const FIRST_TEST_USER_ADDR: ActorID = FIRST_NON_SINGLETON_ADDR + 2;
 
 pub fn apply_ok<S: Serialize>(
-    v: &mut dyn VM,
+    v: &dyn VM,
     from: &Address,
     to: &Address,
     value: &TokenAmount,
@@ -55,7 +55,7 @@ pub fn apply_ok<S: Serialize>(
 }
 
 pub fn apply_code<S: Serialize>(
-    v: &mut dyn VM,
+    v: &dyn VM,
     from: &Address,
     to: &Address,
     value: &TokenAmount,
@@ -70,7 +70,7 @@ pub fn apply_code<S: Serialize>(
 }
 
 pub fn apply_ok_implicit<S: Serialize>(
-    v: &mut dyn VM,
+    v: &dyn VM,
     from: &Address,
     to: &Address,
     value: &TokenAmount,
@@ -81,7 +81,7 @@ pub fn apply_ok_implicit<S: Serialize>(
 }
 
 pub fn apply_code_implicit<S: Serialize>(
-    v: &mut dyn VM,
+    v: &dyn VM,
     from: &Address,
     to: &Address,
     value: &TokenAmount,
@@ -258,17 +258,17 @@ pub fn make_bitfield(bits: &[u64]) -> BitField {
     BitField::try_from_bits(bits.iter().copied()).unwrap()
 }
 
-pub fn miner_dline_info(v: &mut dyn VM, m: &Address) -> DeadlineInfo {
+pub fn miner_dline_info(v: &dyn VM, m: &Address) -> DeadlineInfo {
     let st: MinerState = get_state(v, m).unwrap();
     new_deadline_info_from_offset_and_epoch(&Policy::default(), st.proving_period_start, v.epoch())
 }
 
-pub fn sector_deadline(v: &mut dyn VM, m: &Address, s: SectorNumber) -> (u64, u64) {
+pub fn sector_deadline(v: &dyn VM, m: &Address, s: SectorNumber) -> (u64, u64) {
     let st: MinerState = get_state(v, m).unwrap();
     st.find_sector(&Policy::default(), &DynBlockstore::new(v.blockstore()), s).unwrap()
 }
 
-pub fn get_state<T: DeserializeOwned>(v: &mut dyn VM, a: &Address) -> Option<T> {
+pub fn get_state<T: DeserializeOwned>(v: &dyn VM, a: &Address) -> Option<T> {
     let cid = v.actor_root(a).unwrap();
     v.blockstore().get(&cid).unwrap().map(|slice| fvm_ipld_encoding::from_slice(&slice).unwrap())
 }
@@ -285,7 +285,7 @@ pub fn new_deadline_info_from_offset_and_epoch(
         % policy.wpost_period_deadlines;
     new_deadline_info(policy, current_period_start, current_deadline_idx, current_epoch)
 }
-pub fn miner_balance(v: &mut dyn VM, m: &Address) -> MinerBalances {
+pub fn miner_balance(v: &dyn VM, m: &Address) -> MinerBalances {
     let st: MinerState = get_state(v, m).unwrap();
     MinerBalances {
         available_balance: st.get_available_balance(&v.balance(m)).unwrap(),
