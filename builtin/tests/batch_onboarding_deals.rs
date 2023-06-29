@@ -1,4 +1,4 @@
-use fvm_ipld_blockstore::MemoryBlockstore;
+use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_ipld_hamt::BytesKey;
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
@@ -40,8 +40,9 @@ mod util;
 #[test]
 fn batch_onboarding_deals() {
     // create the execution wrangler
+    let store = SharedMemoryBlockstore::new();
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
-        MemoryBlockstore::new(),
+        store.clone(),
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
@@ -49,9 +50,9 @@ fn batch_onboarding_deals() {
     )
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);
-    let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
+    let _genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let mut bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(&mut *bench);
+    let mut w = ExecutionWrangler::new_default(&mut *bench, store);
 
     batch_onboarding_deals_test(&mut w);
 

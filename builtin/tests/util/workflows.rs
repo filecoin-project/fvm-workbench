@@ -21,7 +21,6 @@ use fvm_shared::sector::{
     PoStProof, RegisteredPoStProof, RegisteredSealProof, SectorNumber, StoragePower,
 };
 use fvm_shared::METHOD_SEND;
-use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::wrangler::VM;
 use fvm_workbench_vm::bench::kernel::TEST_VM_RAND_ARRAY;
 use rand_chacha::rand_core::RngCore;
@@ -160,8 +159,7 @@ pub fn verifreg_add_client(
     client: &Address,
     allowance: StoragePower,
 ) {
-    let add_client_params =
-        AddVerifiedClientParams { address: *client, allowance: allowance.clone() };
+    let add_client_params = AddVerifiedClientParams { address: *client, allowance };
     apply_ok(
         v,
         verifier,
@@ -170,7 +168,7 @@ pub fn verifreg_add_client(
         VerifregMethod::AddVerifiedClient as u64,
         Some(add_client_params),
     );
-    let allowance_tokens = TokenAmount::from_whole(allowance);
+    // let allowance_tokens = TokenAmount::from_whole(allowance);
     // ExpectInvocation {
     //     from: *verifier,
     //     to: VERIFIED_REGISTRY_ACTOR_ADDR,
@@ -205,7 +203,7 @@ pub fn verifreg_add_client(
 
 #[allow(clippy::too_many_arguments)]
 pub fn precommit_sectors(
-    w: &mut ExecutionWrangler,
+    w: &mut dyn VM,
     count: usize,
     batch_size: usize,
     worker: &Address,
@@ -410,7 +408,7 @@ pub fn submit_windowed_post(
     maddr: &Address,
     dline_info: DeadlineInfo,
     partition_idx: u64,
-    new_power: Option<PowerPair>,
+    _new_power: Option<PowerPair>,
 ) {
     let params = SubmitWindowedPoStParams {
         deadline: dline_info.index,
@@ -450,7 +448,7 @@ pub fn submit_windowed_post(
 }
 
 pub fn advance_by_deadline_to_epoch(
-    w: &mut ExecutionWrangler,
+    w: &mut dyn VM,
     maddr: &Address,
     e: ChainEpoch,
 ) -> DeadlineInfo {

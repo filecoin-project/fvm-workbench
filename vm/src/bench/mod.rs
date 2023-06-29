@@ -124,11 +124,15 @@ where
 
     fn state_root(&mut self) -> Cid {
         // TODO: get the state root without flushing?
-        self.executor.state_tree_mut().flush().unwrap()
+        self.executor.flush().unwrap()
     }
 
     fn total_fil(&self) -> TokenAmount {
         self.executor.context().circ_supply.clone()
+    }
+
+    fn flush(&mut self) -> Cid {
+        self.executor.flush().unwrap()
     }
 }
 

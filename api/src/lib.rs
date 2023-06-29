@@ -78,6 +78,11 @@ pub trait Bench {
     /// Get the root cid of the state tree
     fn state_root(&mut self) -> Cid;
 
+    /// Flush the underlying executor. This is useful to force pending changes in the executor's
+    /// BufferedBlockstore to be immediately written into the underlying Blockstore (which may be
+    /// referenced elsewhere)
+    fn flush(&mut self) -> Cid;
+
     /// Get the total amount of FIL in circulation
     fn total_fil(&self) -> TokenAmount;
 }

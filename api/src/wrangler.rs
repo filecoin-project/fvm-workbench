@@ -6,7 +6,6 @@ use anyhow::anyhow;
 use bimap::BiBTreeMap;
 use cid::multihash::{Code, MultihashDigest};
 use cid::Cid;
-use fvm_sdk as fvm;
 use fvm_shared::crypto::signature::{
     Signature, SECP_PUB_LEN, SECP_SIG_LEN, SECP_SIG_MESSAGE_HASH_SIZE,
 };
@@ -32,7 +31,7 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use crate::trace::InvocationTrace;
 pub use crate::{Bench, ExecutionResult};
 
-pub struct ExecutionWrangler<'b> {
+pub struct ExecutionWrangler<'b, BS: Blockstore> {
     bench: &'b mut dyn Bench,
     version: u64,
     gas_limit: u64,
@@ -42,9 +41,13 @@ pub struct ExecutionWrangler<'b> {
     msg_length: usize,
     compute_msg_length: bool,
     primitives: Box<dyn Primitives>,
+    store: BS,
 }
 
-impl<'b> ExecutionWrangler<'b> {
+impl<'b, BS> ExecutionWrangler<'b, BS>
+where
+    BS: Blockstore,
+{
     pub fn new(
         bench: &'b mut dyn Bench,
         version: u64,
@@ -52,6 +55,7 @@ impl<'b> ExecutionWrangler<'b> {
         gas_fee_cap: TokenAmount,
         gas_premium: TokenAmount,
         compute_msg_length: bool,
+        store: BS,
     ) -> Self {
         Self {
             bench,
@@ -63,11 +67,20 @@ impl<'b> ExecutionWrangler<'b> {
             msg_length: 0,
             compute_msg_length,
             primitives: Box::new(FakePrimitives {}),
+            store,
         }
     }
 
-    pub fn new_default(bench: &'b mut dyn Bench) -> Self {
-        Self::new(bench, 0, BLOCK_GAS_LIMIT, TokenAmount::zero(), TokenAmount::zero(), true)
+    pub fn new_default(bench: &'b mut dyn Bench, blockstore: BS) -> Self {
+        Self::new(
+            bench,
+            0,
+            BLOCK_GAS_LIMIT,
+            TokenAmount::zero(),
+            TokenAmount::zero(),
+            true,
+            blockstore,
+        )
     }
 
     pub fn execute(
@@ -117,7 +130,7 @@ impl<'b> ExecutionWrangler<'b> {
     }
 
     pub fn find_actor_state<T: de::DeserializeOwned>(
-        &self,
+        &mut self,
         id: ActorID,
     ) -> anyhow::Result<Option<T>> {
         let actor = self.bench.find_actor(id)?;
@@ -145,7 +158,7 @@ impl<'b> ExecutionWrangler<'b> {
     }
 
     pub fn store(&self) -> &dyn Blockstore {
-        self.bench.store()
+        &self.store
     }
 
     ///// Private helpers /////
@@ -179,9 +192,18 @@ impl<'b> ExecutionWrangler<'b> {
     }
 }
 
-impl<'b> VM for ExecutionWrangler<'b> {
-    fn blockstore(&self) -> &dyn Blockstore {
-        self.bench.store()
+impl<'b, BS> VM for ExecutionWrangler<'b, BS>
+where
+    BS: Blockstore,
+{
+    fn blockstore(&mut self) -> &dyn Blockstore {
+        // It's unfortunate that we need to call flush here everytime we need the blockstore reference
+        // However, the state_tree inside Executor wraps whatever blockstore it's given with a BufferedBlockstore
+        // Since the store held by the Wrangler was cloned prior to being wrapped in the BufferedBlockstore, it's possible
+        // there are pending changes to the underlying blockstore held in the BufferedBlockstore's cache that are not
+        // visible via our handle
+        self.bench.flush();
+        &self.store
     }
 
     fn actor_root(&self, address: &Address) -> Option<Cid> {
@@ -331,7 +353,7 @@ pub struct MessageResult {
 /// An abstract VM that is injected into integration tests
 pub trait VM {
     /// Returns the underlying blockstore of the VM
-    fn blockstore(&self) -> &dyn Blockstore;
+    fn blockstore(&mut self) -> &dyn Blockstore;
 
     /// Get the state root of the specified actor
     fn actor_root(&self, address: &Address) -> Option<Cid>;
