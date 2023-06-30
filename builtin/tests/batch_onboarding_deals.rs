@@ -52,7 +52,7 @@ fn batch_onboarding_deals() {
     let spec = GenesisSpec::default(manifest_data_cid);
     let _genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let bench = builder.build().unwrap();
-    let w = ExecutionWrangler::new_default(bench, store);
+    let w = ExecutionWrangler::new_default(bench, Box::new(store));
 
     batch_onboarding_deals_test(&w);
 

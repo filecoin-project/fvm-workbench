@@ -31,7 +31,7 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use crate::trace::InvocationTrace;
 pub use crate::{Bench, ExecutionResult};
 
-pub struct ExecutionWrangler<BS: Blockstore> {
+pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
     version: u64,
     gas_limit: u64,
@@ -41,13 +41,10 @@ pub struct ExecutionWrangler<BS: Blockstore> {
     msg_length: usize,
     compute_msg_length: bool,
     primitives: Box<dyn Primitives>,
-    store: BS,
+    store: Box<dyn Blockstore>,
 }
 
-impl<BS> ExecutionWrangler<BS>
-where
-    BS: Blockstore,
-{
+impl ExecutionWrangler {
     pub fn new(
         bench: Box<dyn Bench>,
         version: u64,
@@ -55,7 +52,7 @@ where
         gas_fee_cap: TokenAmount,
         gas_premium: TokenAmount,
         compute_msg_length: bool,
-        store: BS,
+        store: Box<dyn Blockstore>,
     ) -> Self {
         Self {
             bench: RefCell::new(bench),
@@ -71,7 +68,7 @@ where
         }
     }
 
-    pub fn new_default(bench: Box<dyn Bench>, blockstore: BS) -> Self {
+    pub fn new_default(bench: Box<dyn Bench>, blockstore: Box<dyn Blockstore>) -> Self {
         Self::new(
             bench,
             0,
@@ -182,10 +179,7 @@ where
     }
 }
 
-impl<BS> VM for ExecutionWrangler<BS>
-where
-    BS: Blockstore,
-{
+impl VM for ExecutionWrangler {
     fn blockstore(&self) -> &dyn Blockstore {
         // It's unfortunate that we need to call flush here everytime we need the blockstore reference
         // However, the state_tree inside Executor wraps whatever blockstore it's given with a BufferedBlockstore
@@ -193,7 +187,7 @@ where
         // there are pending changes to the underlying blockstore held in the BufferedBlockstore's cache that are not
         // visible via our handle
         self.bench.borrow_mut().flush();
-        &self.store
+        self.store.as_ref()
     }
 
     fn actor_root(&self, address: &Address) -> Option<Cid> {
