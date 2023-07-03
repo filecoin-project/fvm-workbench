@@ -1,5 +1,5 @@
 use fil_actors_runtime::INIT_ACTOR_ADDR;
-use fvm_ipld_blockstore::MemoryBlockstore;
+use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_ipld_encoding::RawBytes;
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
@@ -16,8 +16,9 @@ use fvm_workbench_vm::externs::FakeExterns;
 
 #[test]
 fn test_hookup() {
+    let store = SharedMemoryBlockstore::new();
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
-        MemoryBlockstore::new(),
+        store.clone(),
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
@@ -27,8 +28,8 @@ fn test_hookup() {
 
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
-    let mut bench = builder.build().unwrap();
-    let mut wrangler = ExecutionWrangler::new_default(&mut *bench);
+    let bench = builder.build().unwrap();
+    let wrangler = ExecutionWrangler::new_default(bench, Box::new(store));
 
     let result = wrangler
         .execute(

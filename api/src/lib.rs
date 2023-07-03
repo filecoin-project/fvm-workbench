@@ -73,6 +73,8 @@ pub trait Bench {
     /// Resolves an address to an actor ID.
     /// Returns None if the address cannot be resolved.
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
+    /// Flush underlying storage
+    fn flush(&mut self) -> Cid;
 }
 
 /// The result of a message execution.
