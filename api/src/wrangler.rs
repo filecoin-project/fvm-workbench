@@ -29,6 +29,7 @@ use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 
 use crate::trace::InvocationTrace;
+use crate::Actor;
 pub use crate::{Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
@@ -284,15 +285,6 @@ impl VM for ExecutionWrangler {
 #[derive(Debug)]
 pub struct TestVMError {
     msg: String,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Actor {
-    pub code: Cid,
-    pub head: Cid,
-    pub call_seq_num: u64,
-    pub balance: TokenAmount,
-    pub predictable_address: Option<Address>,
 }
 
 pub fn actor(
