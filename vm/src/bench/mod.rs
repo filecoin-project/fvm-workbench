@@ -11,15 +11,16 @@ use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
+use fvm_workbench_api::bench::{ActorState, Bench, ExecutionResult};
 use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
 use fvm_workbench_api::trace::ExecutionTrace;
-use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
 
 use crate::externs::FakeExterns;
 
 pub use self::kernel::BenchKernel;
 
 pub mod kernel;
+pub mod primitives;
 
 /// A workbench instance backed by a real FVM.
 pub struct FvmBench<B>

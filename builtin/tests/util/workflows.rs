@@ -65,8 +65,7 @@ pub fn create_accounts_seeded(
         )?;
     }
     // Resolve pk address to return ID of account actor
-    let ids: Vec<ActorID> =
-        keys.iter().map(|key| w.resolve_address(&key.addr).unwrap().unwrap()).collect();
+    let ids: Vec<ActorID> = keys.iter().map(|key| id_address(w, &key.addr)).collect();
     let accounts =
         keys.into_iter().enumerate().map(|(i, key)| Account { id: ids[i], key }).collect();
     Ok(accounts)
@@ -176,8 +175,6 @@ pub fn precommit_sectors_v2(
     exp: Option<ChainEpoch>,
     v2: bool,
 ) -> Vec<SectorPreCommitOnChainInfo> {
-    let mid = w.resolve_address(maddr).unwrap().unwrap();
-
     let expiration = match exp {
         None => {
             w.epoch()
@@ -276,12 +273,12 @@ pub fn precommit_sectors_v2(
         }
     }
     // extract chain state
-    let mstate: MinerState = w.find_actor_state(mid).unwrap().unwrap();
+    let mstate: MinerState = get_state(w, maddr).unwrap();
     (0..count)
         .map(|i| {
             mstate
                 .get_precommitted_sector(
-                    &DynBlockstore::new(w.store()),
+                    &DynBlockstore::new(w.blockstore()),
                     sector_number_base + i as u64,
                 )
                 .unwrap()

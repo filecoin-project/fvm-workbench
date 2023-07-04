@@ -1882,6 +1882,7 @@ dependencies = [
  "fvm_ipld_encoding",
  "fvm_ipld_hamt",
  "fvm_shared",
+ "libsecp256k1",
  "multihash",
  "replace_with",
  "thiserror",

@@ -8,6 +8,8 @@ use fvm_shared::{
     address::Address, clock::ChainEpoch, econ::TokenAmount, error::ExitCode, MethodNum,
 };
 
+use crate::bench::ExecutionResult;
+
 use self::primitives::Primitives;
 use self::trace::InvocationTrace;
 
@@ -18,9 +20,6 @@ pub mod trace;
 pub trait VM {
     /// Returns the underlying blockstore of the VM
     fn blockstore(&self) -> &dyn Blockstore;
-
-    /// Get the state root of the specified actor
-    fn actor_root(&self, address: &Address) -> Option<Cid>;
 
     /// Get the current chain epoch
     fn epoch(&self) -> ChainEpoch;
@@ -41,6 +40,16 @@ pub trait VM {
         params: Option<IpldBlock>,
     ) -> Result<MessageResult, TestVMError>;
 
+    /// Send a message without charging gas
+    fn execute_message_implicit(
+        &self,
+        from: &Address,
+        to: &Address,
+        value: &TokenAmount,
+        method: MethodNum,
+        params: Option<IpldBlock>,
+    ) -> Result<MessageResult, TestVMError>;
+
     /// Sets the epoch to the specified value
     fn set_epoch(&self, epoch: ChainEpoch);
 
@@ -52,12 +61,6 @@ pub trait VM {
 
     /// Provides access to VM primitives
     fn primitives(&self) -> &dyn Primitives;
-
-    /// Get the root Cid of the state tree
-    fn state_root(&self) -> Cid;
-
-    /// Get the total amount of FIL in circulation
-    fn total_fil(&self) -> TokenAmount;
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -65,6 +68,16 @@ pub struct MessageResult {
     pub code: ExitCode,
     pub message: String,
     pub ret: Option<IpldBlock>,
+}
+
+impl From<ExecutionResult> for MessageResult {
+    fn from(res: ExecutionResult) -> Self {
+        Self {
+            code: res.receipt.exit_code,
+            message: res.message,
+            ret: res.receipt.return_data.into(),
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -88,7 +101,7 @@ pub fn actor(
 
 #[derive(Debug)]
 pub struct TestVMError {
-    msg: String,
+    pub msg: String,
 }
 
 impl fmt::Display for TestVMError {

@@ -10,10 +10,13 @@ use fvm_shared::sector::{RegisteredSealProof, StoragePower};
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_workbench_api::analysis::TraceAnalysis;
+use fvm_workbench_api::bench::{ExecutionResult, WorkbenchBuilder};
 use fvm_workbench_api::blockstore::DynBlockstore;
+use fvm_workbench_api::vm::VM;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::{ExecutionResult, WorkbenchBuilder};
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
+use fvm_workbench_vm::bench::kernel::UNSEALED_SECTOR_CID_INPUT;
+use fvm_workbench_vm::bench::primitives::FakePrimitives;
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 use num_traits::Zero;
@@ -30,7 +33,7 @@ use fil_actor_miner::{Method as MinerMethod, ProveCommitAggregateParams};
 use fil_actors_runtime::cbor::serialize;
 use fil_actors_runtime::runtime::policy::policy_constants::PRE_COMMIT_CHALLENGE_DELAY;
 use fil_actors_runtime::runtime::Policy;
-use fil_actors_runtime::{STORAGE_MARKET_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ID};
+use fil_actors_runtime::{STORAGE_MARKET_ACTOR_ADDR};
 
 const BATCH_SIZE: usize = 8;
 const PRECOMMIT_V2: bool = true;
@@ -56,7 +59,7 @@ fn batch_onboarding_deals() {
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(bench, Box::new(store));
+    let mut w = ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}));
 
     let deal_duration: ChainEpoch = Policy::default().min_sector_expiration;
     let sector_duration: ChainEpoch =
@@ -75,7 +78,7 @@ fn batch_onboarding_deals() {
     let owner_addr = worker.id_addr();
 
     // Create miner
-    let (miner_id, miner) = create_miner(
+    let (_miner_id, miner) = create_miner(
         &mut w,
         worker.id, // worker is the owner in this case
         worker.id,
@@ -117,10 +120,10 @@ fn batch_onboarding_deals() {
 
     // Verify datacap allocations.
     let mut market_state: fil_actor_market::State =
-        w.find_actor_state(STORAGE_MARKET_ACTOR_ID).unwrap().unwrap();
+        get_state(&w, &STORAGE_MARKET_ACTOR_ADDR).unwrap();
     let deal_keys: Vec<BytesKey> = deals.iter().map(|(id, _)| deal_id_key(*id)).collect();
     let alloc_ids = market_state
-        .get_pending_deal_allocation_ids(&DynBlockstore::new(w.store()), &deal_keys)
+        .get_pending_deal_allocation_ids(&DynBlockstore::new(w.blockstore()), &deal_keys)
         .unwrap();
     assert_eq!(BATCH_SIZE, alloc_ids.len());
 
@@ -131,7 +134,7 @@ fn batch_onboarding_deals() {
         .into_iter()
         .map(|(id, _deal)| PrecommitMetadata {
             deals: vec![id],
-            commd: CompactCommD(Some(make_piece_cid(b"test data"))),
+            commd: CompactCommD(Some(make_piece_cid(&UNSEALED_SECTOR_CID_INPUT))),
         })
         .collect();
 
@@ -165,8 +168,9 @@ fn batch_onboarding_deals() {
     let (dline_info, p_idx) = advance_to_proving_deadline(&mut w, &miner, 0);
 
     let sector_size = SEAL_PROOF.sector_size().unwrap();
-    let st: MinerState = w.find_actor_state(miner_id).unwrap().unwrap();
-    let sector = st.get_sector(&DynBlockstore::new(w.store()), first_sector_no).unwrap().unwrap();
+    let st: MinerState = get_state(&w, &miner).unwrap();
+    let sector =
+        st.get_sector(&DynBlockstore::new(w.blockstore()), first_sector_no).unwrap().unwrap();
     let mut expect_new_power = power_for_sector(sector_size, &sector);
     // Confirm the verified deal resulted in QA power.
     assert_eq!(&expect_new_power.raw * 10, expect_new_power.qa);
@@ -182,7 +186,7 @@ fn batch_onboarding_deals() {
     );
 
     // Verify state expectations.
-    let balances = get_miner_balance(&mut w, miner_id);
+    let balances = get_miner_balance(&mut w, &miner);
     assert!(balances.initial_pledge.is_positive());
 
     // let network_stats = get_network_stats(v);

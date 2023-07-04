@@ -12,7 +12,7 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::sector::StoragePower;
 use fvm_shared::{ActorID, HAMT_BIT_WIDTH};
 
-use fvm_workbench_api::WorkbenchBuilder;
+use fvm_workbench_api::bench::WorkbenchBuilder;
 
 /// A specification for installing built-in actors to seed a VM.
 pub struct GenesisSpec {

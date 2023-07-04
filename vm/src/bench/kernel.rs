@@ -33,6 +33,7 @@ pub const TEST_VM_RAND_ARRAY: [u8; 32] = [
     1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32,
 ];
+pub const UNSEALED_SECTOR_CID_INPUT: [u8; 9] = *b"TEST DATA";
 
 // TODO: extend test configuration to allow dynamic toggling for certain features to be intercepted
 // and the behaviour once intercepted
@@ -113,7 +114,7 @@ where
                 // We don't actually control when a new Kernel is constructed so we can't pass this value in dynamically
                 // TODO: establish a pattern for intercepting Kernel behaviour in a more dynamic way
                 // https://github.com/anorth/fvm-workbench/issues/9
-                unsealed_sector_cid: Some(make_piece_cid(b"test data")),
+                unsealed_sector_cid: Some(make_piece_cid(&UNSEALED_SECTOR_CID_INPUT)),
             },
         }
     }

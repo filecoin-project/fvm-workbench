@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 // Code used only in tests is treated as "dead"
 use bls_signatures::Serialize as BLS_Serialize;
 use cid::Cid;
@@ -11,6 +12,7 @@ use fil_actor_miner::{
 use fil_actors_runtime::runtime::Policy;
 use fil_actors_runtime::util::cbor::serialize;
 use fvm_ipld_bitfield::BitField;
+use fvm_ipld_encoding::de::DeserializeOwned;
 use fvm_ipld_encoding::ser;
 use fvm_shared::address::{Address, Protocol};
 use fvm_shared::clock::{ChainEpoch, QuantSpec};
@@ -21,9 +23,10 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
 use fvm_shared::sector::{RegisteredSealProof, SectorNumber};
 use fvm_shared::{ActorID, MethodNum};
+use fvm_workbench_api::bench::ExecutionResult;
 use fvm_workbench_api::blockstore::DynBlockstore;
+use fvm_workbench_api::vm::VM;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::ExecutionResult;
 use multihash::derive::Multihash;
 use multihash::MultihashDigest;
 use rand_chacha::rand_core::SeedableRng;
@@ -32,6 +35,13 @@ use rand_chacha::ChaCha8Rng;
 pub mod hookup;
 pub mod workflows;
 
+// ============= dyn VM utils TODO: these should be imported from an external location
+pub fn get_state<T: DeserializeOwned>(v: &dyn VM, a: &Address) -> Option<T> {
+    let cid = v.actor(a).unwrap().head;
+    v.blockstore().get(&cid).unwrap().map(|slice| fvm_ipld_encoding::from_slice(&slice).unwrap())
+}
+
+// ============= concrete utils TODO: these should all be replaced by the utils from builtin-actors that take &dyn VM
 pub fn apply_ok<T: ser::Serialize + ?Sized>(
     w: &mut ExecutionWrangler,
     from: Address,
@@ -228,15 +238,17 @@ pub fn make_bitfield(bits: &[u64]) -> BitField {
     BitField::try_from_bits(bits.iter().copied()).unwrap()
 }
 
+pub fn id_address(v: &dyn VM, address: &Address) -> u64 {
+    v.resolve_id_address(address).unwrap().id().unwrap()
+}
+
 pub fn sector_deadline(w: &mut ExecutionWrangler, m: &Address, s: SectorNumber) -> (u64, u64) {
-    let m = w.resolve_address(m).unwrap().unwrap();
-    let st: MinerState = w.find_actor_state(m).unwrap().unwrap();
-    st.find_sector(&Policy::default(), &DynBlockstore::new(w.store()), s).unwrap()
+    let st: MinerState = get_state(w, m).unwrap();
+    st.find_sector(&Policy::default(), &DynBlockstore::new(w.blockstore()), s).unwrap()
 }
 
 pub fn miner_dline_info(w: &mut ExecutionWrangler, maddr: &Address) -> DeadlineInfo {
-    let m_id = w.resolve_address(maddr).unwrap().unwrap();
-    let st: MinerState = w.find_actor_state(m_id).unwrap().unwrap();
+    let st: MinerState = get_state(w, maddr).unwrap();
     new_deadline_info_from_offset_and_epoch(&Policy::default(), st.proving_period_start, w.epoch())
 }
 
@@ -253,9 +265,9 @@ pub fn new_deadline_info_from_offset_and_epoch(
     new_deadline_info(policy, current_period_start, current_deadline_idx, current_epoch)
 }
 
-pub fn get_miner_balance(w: &mut ExecutionWrangler, miner_id: ActorID) -> MinerBalances {
-    let a = w.find_actor(miner_id).unwrap().unwrap();
-    let st: MinerState = w.find_actor_state(miner_id).unwrap().unwrap();
+pub fn get_miner_balance(w: &mut ExecutionWrangler, maddr: &Address) -> MinerBalances {
+    let a = w.actor(maddr).unwrap();
+    let st: MinerState = get_state(w, maddr).unwrap();
     MinerBalances {
         available_balance: st.get_available_balance(&a.balance).unwrap(),
         vesting_balance: st.locked_funds,
