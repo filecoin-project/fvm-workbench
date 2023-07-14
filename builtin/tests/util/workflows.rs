@@ -163,33 +163,6 @@ pub fn verifreg_add_client(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn precommit_sectors(
-    w: &mut ExecutionWrangler,
-    count: usize,
-    batch_size: usize,
-    worker: &Address,
-    maddr: &Address,
-    seal_proof: RegisteredSealProof,
-    sector_number_base: SectorNumber,
-    expect_cron_enroll: bool,
-    exp: Option<ChainEpoch>,
-) -> Vec<SectorPreCommitOnChainInfo> {
-    precommit_sectors_v2(
-        w,
-        count,
-        batch_size,
-        vec![], // no deals
-        worker,
-        maddr,
-        seal_proof,
-        sector_number_base,
-        expect_cron_enroll,
-        exp,
-        false,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
 pub fn precommit_sectors_v2(
     w: &mut ExecutionWrangler,
     count: usize,
@@ -344,18 +317,6 @@ pub fn submit_windowed_post(
         &params,
     )
     .unwrap()
-}
-
-pub fn advance_by_deadline_to_epoch(
-    w: &mut ExecutionWrangler,
-    maddr: &Address,
-    e: ChainEpoch,
-) -> DeadlineInfo {
-    // keep advancing until the epoch of interest is within the deadline
-    // if e is dline.last() == dline.close -1 cron is not run
-    let dline_info = advance_by_deadline(w, maddr, |dline_info| dline_info.close < e);
-    w.set_epoch(e);
-    dline_info
 }
 
 fn advance_by_deadline<F>(w: &mut ExecutionWrangler, maddr: &Address, more: F) -> DeadlineInfo

@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 
+use cid::Cid;
 use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
@@ -116,6 +117,10 @@ where
             )
             .unwrap()
         });
+    }
+
+    fn flush(&mut self) -> Cid {
+        self.executor.flush().unwrap()
     }
 }
 

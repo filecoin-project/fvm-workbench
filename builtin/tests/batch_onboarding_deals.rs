@@ -1,4 +1,4 @@
-use fvm_ipld_blockstore::MemoryBlockstore;
+use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_ipld_hamt::BytesKey;
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
@@ -40,11 +40,13 @@ use crate::util::*;
 use crate::workflows::*;
 mod util;
 
+// TODO: this test should be deleted and imported externally. the imported test should use a generic VM trait
 #[test]
 fn batch_onboarding_deals() {
     // create the execution wrangler
+    let store = SharedMemoryBlockstore::new();
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
-        MemoryBlockstore::new(),
+        store.clone(),
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
@@ -53,8 +55,8 @@ fn batch_onboarding_deals() {
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
-    let mut bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(&mut *bench);
+    let bench = builder.build().unwrap();
+    let mut w = ExecutionWrangler::new_default(bench, Box::new(store));
 
     let deal_duration: ChainEpoch = Policy::default().min_sector_expiration;
     let sector_duration: ChainEpoch =
