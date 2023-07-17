@@ -34,6 +34,7 @@ pub use crate::{Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
+    store: Box<dyn Blockstore>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
@@ -46,8 +47,11 @@ pub struct ExecutionWrangler {
 }
 
 impl ExecutionWrangler {
+    /// Creates a new wrangler wrapping a given Bench. The store passed here must be a handle that
+    /// operates on the same underlying storage as the bench
     pub fn new(
         bench: Box<dyn Bench>,
+        store: Box<dyn Blockstore>,
         version: u64,
         gas_limit: u64,
         gas_fee_cap: TokenAmount,
@@ -57,6 +61,7 @@ impl ExecutionWrangler {
     ) -> Self {
         Self {
             bench: RefCell::new(bench),
+            store,
             version,
             gas_limit,
             gas_fee_cap,
@@ -69,21 +74,13 @@ impl ExecutionWrangler {
         }
     }
 
-    pub fn new_default(bench: Box<dyn Bench>, blockstore: Box<dyn Blockstore>) -> Self {
-        Self::new(
-            bench,
-            0,
-            BLOCK_GAS_LIMIT,
-            TokenAmount::zero(),
-            TokenAmount::zero(),
-            true,
-            blockstore,
-        )
+    /// Creates a new wrangler wrapping a given Bench. The store passed here must be a handle that
+    /// operates on the same underlying storage as the bench
+    pub fn new_default(bench: Box<dyn Bench>, store: Box<dyn Blockstore>) -> Self {
+        Self::new(bench, store, 0, BLOCK_GAS_LIMIT, TokenAmount::zero(), TokenAmount::zero(), true)
     }
 
-    ///// Private helpers - functionality should be accessed via the VM trait /////
-
-    fn execute(
+    pub fn execute(
         &self,
         from: Address,
         to: Address,
@@ -100,7 +97,7 @@ impl ExecutionWrangler {
         ret
     }
 
-    fn execute_implicit(
+    pub fn execute_implicit(
         &self,
         from: Address,
         to: Address,
@@ -117,37 +114,59 @@ impl ExecutionWrangler {
         ret
     }
 
-    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<Actor>> {
+    pub fn epoch(&self) -> ChainEpoch {
+        self.bench.borrow().epoch()
+    }
+
+    pub fn set_epoch(&self, epoch: ChainEpoch) {
+        self.bench.borrow_mut().set_epoch(epoch);
+    }
+
+    pub fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
         self.bench.borrow().find_actor(id)
     }
 
-    // pub fn find_actor_state<T: de::DeserializeOwned>(
-    //     &mut self,
-    //     id: ActorID,
-    // ) -> anyhow::Result<Option<T>> {
-    //     let actor = self.bench.borrow().find_actor(id)?;
-    //     Ok(match actor {
-    //         Some(actor) => {
-    //             let block = self
-    //                 .bench
-    //                 .borrow()
-    //                 .store()
-    //                 .get(&actor.code)
-    //                 .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
+    pub fn find_actor_state<T: de::DeserializeOwned>(
+        &self,
+        id: ActorID,
+    ) -> anyhow::Result<Option<T>> {
+        let actor = self.bench.borrow().find_actor(id)?;
+        Ok(match actor {
+            Some(actor) => {
+                let block = self
+                    .bench
+                    .borrow()
+                    .store()
+                    .get(&actor.state)
+                    .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
 
-    //             block
-    //                 .map(|s| {
-    //                     from_slice(&s)
-    //                         .map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
-    //                 })
-    //                 .transpose()?
-    //         }
-    //         None => None,
-    //     })
-    // }
+                block
+                    .map(|s| {
+                        from_slice(&s)
+                            .map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
+                    })
+                    .transpose()?
+            }
+            None => None,
+        })
+    }
 
-    fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
+    pub fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
         self.bench.borrow().resolve_address(addr)
+    }
+
+    /// Returns a reference to the underlying blockstore
+    /// The blockstore handle here is intended to be short-lived as some executors may buffer changes leading to this
+    /// handle drifting out of sync
+    // TODO: https://github.com/anorth/fvm-workbench/issues/15
+    pub fn store(&self) -> &dyn Blockstore {
+        // It's unfortunate that we need to call flush here everytime we need the wrangler to give out a blockstore reference
+        // However, the state_tree inside Executor wraps whatever blockstore it's given with a BufferedBlockstore
+        // Since the store held by the Wrangler was cloned prior to being wrapped in the BufferedBlockstore, it's possible
+        // there are pending changes to the underlying blockstore held in the BufferedBlockstore's cache that are not
+        // visible via our handle.
+        self.bench.borrow_mut().flush();
+        self.store.as_ref()
     }
 
     fn make_msg(

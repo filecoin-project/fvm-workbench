@@ -7,6 +7,7 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::receipt::Receipt;
 use fvm_shared::ActorID;
+use wrangler::Actor;
 
 use crate::trace::ExecutionTrace;
 
@@ -74,17 +75,6 @@ pub trait Bench {
     /// Resolves an address to an actor ID.
     /// Returns None if the address cannot be resolved.
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
-
-    /// Get the root cid of the state tree
-    fn state_root(&mut self) -> Cid;
-
-    /// Flush the underlying executor. This is useful to force pending changes in the executor's
-    /// BufferedBlockstore to be immediately written into the underlying Blockstore (which may be
-    /// referenced elsewhere)
-    fn flush(&mut self) -> Cid;
-
-    /// Get the total amount of FIL in circulation
-    fn total_fil(&self) -> TokenAmount;
 }
 
 /// The result of a message execution.
@@ -108,11 +98,14 @@ pub struct ExecutionResult {
     pub message: String,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Actor {
+/// An actor root state object.
+pub struct ActorState {
+    /// Link to code for the actor.
     pub code: Cid,
-    pub head: Cid,
-    pub call_seq_num: u64,
+    /// Link to the state of the actor.
+    pub state: Cid,
+    /// Sequence of the actor.
+    pub sequence: u64,
+    /// Tokens available to the actor.
     pub balance: TokenAmount,
-    pub predictable_address: Option<Address>,
 }

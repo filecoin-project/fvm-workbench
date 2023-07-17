@@ -37,6 +37,7 @@ use crate::util::*;
 use crate::workflows::*;
 mod util;
 
+// TODO: this test should be deleted and imported externally. the imported test should use a generic VM trait
 #[test]
 fn batch_onboarding_deals() {
     // create the execution wrangler
@@ -50,20 +51,9 @@ fn batch_onboarding_deals() {
     )
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);
-    let _genesis = create_genesis_actors(&mut builder, &spec).unwrap();
+    let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let bench = builder.build().unwrap();
-    let w = ExecutionWrangler::new_default(bench, Box::new(store));
-
-    batch_onboarding_deals_test(&w);
-
-    // let network_stats = get_network_stats(v);
-    // assert_eq!(
-    //     network_stats.total_bytes_committed,
-    //     BigInt::from(sector_size as usize * BATCH_SIZE)
-    // );
-    // assert_eq!(network_stats.total_qa_bytes_committed, network_stats.total_bytes_committed * 10);
-    // assert!(network_stats.total_pledge_collateral.is_positive());
-}
+    let mut w = ExecutionWrangler::new_default(bench, Box::new(store));
 
 // Tests batch onboarding of sectors with verified deals.
 pub fn batch_onboarding_deals_test(v: &dyn VM) {
