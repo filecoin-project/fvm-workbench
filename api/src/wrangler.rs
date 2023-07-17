@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use bimap::BiBTreeMap;
 use cid::multihash::{Code, MultihashDigest};
 use cid::Cid;
+use fvm_ipld_encoding::de::DeserializeOwned;
 use fvm_shared::crypto::signature::{
     Signature, SECP_PUB_LEN, SECP_SIG_LEN, SECP_SIG_MESSAGE_HASH_SIZE,
 };
@@ -15,11 +16,11 @@ use fvm_shared::sector::RegisteredSealProof;
 use std::fmt;
 
 use fil_actors_runtime::runtime::builtins::Type;
-use fil_actors_runtime::runtime::{Policy, Primitives};
+use fil_actors_runtime::runtime::Primitives;
 use fil_actors_runtime::test_utils::{make_piece_cid, recover_secp_public_key};
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
-use fvm_ipld_encoding::RawBytes;
+use fvm_ipld_encoding::{from_slice, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
@@ -29,11 +30,12 @@ use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 
 use crate::trace::InvocationTrace;
-use crate::Actor;
+use crate::ActorState;
 pub use crate::{Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
+    store: Box<dyn Blockstore>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
@@ -42,21 +44,23 @@ pub struct ExecutionWrangler {
     msg_length: usize,
     compute_msg_length: bool,
     primitives: Box<dyn Primitives>,
-    store: Box<dyn Blockstore>,
 }
 
 impl ExecutionWrangler {
+    /// Creates a new wrangler wrapping a given Bench. The store passed here must be a handle that
+    /// operates on the same underlying storage as the bench
     pub fn new(
         bench: Box<dyn Bench>,
+        store: Box<dyn Blockstore>,
         version: u64,
         gas_limit: u64,
         gas_fee_cap: TokenAmount,
         gas_premium: TokenAmount,
         compute_msg_length: bool,
-        store: Box<dyn Blockstore>,
     ) -> Self {
         Self {
             bench: RefCell::new(bench),
+            store,
             version,
             gas_limit,
             gas_fee_cap,
@@ -65,25 +69,16 @@ impl ExecutionWrangler {
             msg_length: 0,
             compute_msg_length,
             primitives: Box::new(FakePrimitives {}),
-            store,
         }
     }
 
-    pub fn new_default(bench: Box<dyn Bench>, blockstore: Box<dyn Blockstore>) -> Self {
-        Self::new(
-            bench,
-            0,
-            BLOCK_GAS_LIMIT,
-            TokenAmount::zero(),
-            TokenAmount::zero(),
-            true,
-            blockstore,
-        )
+    /// Creates a new wrangler wrapping a given Bench. The store passed here must be a handle that
+    /// operates on the same underlying storage as the bench
+    pub fn new_default(bench: Box<dyn Bench>, store: Box<dyn Blockstore>) -> Self {
+        Self::new(bench, store, 0, BLOCK_GAS_LIMIT, TokenAmount::zero(), TokenAmount::zero(), true)
     }
 
-    ///// Private helpers - functionality should be accessed via the VM trait /////
-
-    fn execute(
+    pub fn execute(
         &self,
         from: Address,
         to: Address,
@@ -100,7 +95,7 @@ impl ExecutionWrangler {
         ret
     }
 
-    fn execute_implicit(
+    pub fn execute_implicit(
         &self,
         from: Address,
         to: Address,
@@ -117,37 +112,56 @@ impl ExecutionWrangler {
         ret
     }
 
-    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<Actor>> {
+    pub fn epoch(&self) -> ChainEpoch {
+        self.bench.borrow().epoch()
+    }
+
+    pub fn set_epoch(&self, epoch: ChainEpoch) {
+        self.bench.borrow_mut().set_epoch(epoch);
+    }
+
+    pub fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>> {
         self.bench.borrow().find_actor(id)
     }
 
-    // pub fn find_actor_state<T: de::DeserializeOwned>(
-    //     &mut self,
-    //     id: ActorID,
-    // ) -> anyhow::Result<Option<T>> {
-    //     let actor = self.bench.borrow().find_actor(id)?;
-    //     Ok(match actor {
-    //         Some(actor) => {
-    //             let block = self
-    //                 .bench
-    //                 .borrow()
-    //                 .store()
-    //                 .get(&actor.code)
-    //                 .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
+    pub fn find_actor_state<T: DeserializeOwned>(&self, id: ActorID) -> anyhow::Result<Option<T>> {
+        let actor = self.bench.borrow().find_actor(id)?;
+        Ok(match actor {
+            Some(actor) => {
+                let block = self
+                    .bench
+                    .borrow()
+                    .store()
+                    .get(&actor.state)
+                    .map_err(|e| anyhow!("failed to load state for actor {}: {}", id, e))?;
 
-    //             block
-    //                 .map(|s| {
-    //                     from_slice(&s)
-    //                         .map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
-    //                 })
-    //                 .transpose()?
-    //         }
-    //         None => None,
-    //     })
-    // }
+                block
+                    .map(|s| {
+                        from_slice(&s)
+                            .map_err(|e| anyhow!("failed to deserialize actor state: {}", e))
+                    })
+                    .transpose()?
+            }
+            None => None,
+        })
+    }
 
-    fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
+    pub fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
         self.bench.borrow().resolve_address(addr)
+    }
+
+    /// Returns a reference to the underlying blockstore
+    /// The blockstore handle here is intended to be short-lived as some executors may buffer changes leading to this
+    /// handle drifting out of sync
+    // TODO: https://github.com/anorth/fvm-workbench/issues/15
+    pub fn store(&self) -> &dyn Blockstore {
+        // It's unfortunate that we need to call flush here everytime we need the wrangler to give out a blockstore reference
+        // However, the state_tree inside Executor wraps whatever blockstore it's given with a BufferedBlockstore
+        // Since the store held by the Wrangler was cloned prior to being wrapped in the BufferedBlockstore, it's possible
+        // there are pending changes to the underlying blockstore held in the BufferedBlockstore's cache that are not
+        // visible via our handle.
+        self.bench.borrow_mut().flush();
+        self.store.as_ref()
     }
 
     fn make_msg(
@@ -195,7 +209,7 @@ impl VM for ExecutionWrangler {
         let maybe_address = self.resolve_address(address).ok()?;
         let maybe_head = maybe_address.map(|id| {
             let maybe_actor = self.find_actor(id).ok().unwrap_or_default();
-            maybe_actor.map(|actor| actor.head)
+            maybe_actor.map(|actor| actor.state)
         });
         maybe_head?
     }
@@ -256,7 +270,7 @@ impl VM for ExecutionWrangler {
         todo!()
     }
 
-    fn actor(&self, address: &Address) -> Option<Actor> {
+    fn actor(&self, address: &Address) -> Option<ActorState> {
         let id = self.bench.borrow().resolve_address(address).ok()??;
         self.bench.borrow().find_actor(id).ok()?
     }
@@ -268,18 +282,6 @@ impl VM for ExecutionWrangler {
     fn primitives(&self) -> &dyn Primitives {
         self.primitives.as_ref()
     }
-
-    fn policy(&self) -> Policy {
-        Policy::default()
-    }
-
-    fn state_root(&self) -> Cid {
-        self.bench.borrow_mut().state_root()
-    }
-
-    fn total_fil(&self) -> TokenAmount {
-        self.bench.borrow().total_fil()
-    }
 }
 
 #[derive(Debug)]
@@ -287,14 +289,8 @@ pub struct TestVMError {
     msg: String,
 }
 
-pub fn actor(
-    code: Cid,
-    head: Cid,
-    call_seq_num: u64,
-    balance: TokenAmount,
-    predictable_address: Option<Address>,
-) -> Actor {
-    Actor { code, head, call_seq_num, balance, predictable_address }
+pub fn actor(code: Cid, state: Cid, sequence: u64, balance: TokenAmount) -> ActorState {
+    ActorState { code, state, sequence, balance }
 }
 
 impl fmt::Display for TestVMError {
@@ -370,22 +366,13 @@ pub trait VM {
     fn take_invocations(&self) -> Vec<InvocationTrace>;
 
     /// Get information about an actor
-    fn actor(&self, address: &Address) -> Option<Actor>;
+    fn actor(&self, address: &Address) -> Option<ActorState>;
 
     /// Build a map of all actors in the system and their type
     fn actor_manifest(&self) -> BiBTreeMap<Cid, Type>;
 
     /// Provides access to VM primitives
     fn primitives(&self) -> &dyn Primitives;
-
-    /// Get the current runtime policy
-    fn policy(&self) -> Policy;
-
-    /// Get the root Cid of the state tree
-    fn state_root(&self) -> Cid;
-
-    /// Get the total amount of FIL in circulation
-    fn total_fil(&self) -> TokenAmount;
 }
 
 impl From<ExecutionResult> for MessageResult {
