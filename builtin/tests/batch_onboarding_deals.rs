@@ -51,9 +51,12 @@ fn batch_onboarding_deals() {
     )
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);
-    let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
+    let _genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let bench = builder.build().unwrap();
-    let mut w = ExecutionWrangler::new_default(bench, Box::new(store));
+    let w = ExecutionWrangler::new_default(bench, Box::new(store));
+
+    batch_onboarding_deals_test(&w);
+}
 
 // Tests batch onboarding of sectors with verified deals.
 pub fn batch_onboarding_deals_test(v: &dyn VM) {

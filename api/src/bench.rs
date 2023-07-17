@@ -7,7 +7,7 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
 
-use crate::{Actor, ExecutionResult};
+use crate::{ActorState, ExecutionResult};
 
 /// A factory for workbench instances.
 /// Built-in actors must be installed before the workbench can be created.
@@ -63,7 +63,7 @@ pub trait Bench {
     fn store(&self) -> &dyn Blockstore;
     /// Looks up a top-level actor state object in the VM.
     /// Returns None if no such actor is found.
-    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<Actor>>;
+    fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>>;
     /// Resolves an address to an actor ID.
     /// Returns None if the address cannot be resolved.
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;

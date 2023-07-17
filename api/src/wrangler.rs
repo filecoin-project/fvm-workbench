@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use bimap::BiBTreeMap;
 use cid::multihash::{Code, MultihashDigest};
 use cid::Cid;
+use fvm_ipld_encoding::de::DeserializeOwned;
 use fvm_shared::crypto::signature::{
     Signature, SECP_PUB_LEN, SECP_SIG_LEN, SECP_SIG_MESSAGE_HASH_SIZE,
 };
@@ -15,11 +16,11 @@ use fvm_shared::sector::RegisteredSealProof;
 use std::fmt;
 
 use fil_actors_runtime::runtime::builtins::Type;
-use fil_actors_runtime::runtime::{Policy, Primitives};
+use fil_actors_runtime::runtime::Primitives;
 use fil_actors_runtime::test_utils::{make_piece_cid, recover_secp_public_key};
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
-use fvm_ipld_encoding::RawBytes;
+use fvm_ipld_encoding::{from_slice, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
@@ -29,7 +30,7 @@ use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 
 use crate::trace::InvocationTrace;
-use crate::Actor;
+use crate::ActorState;
 pub use crate::{Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
@@ -43,7 +44,6 @@ pub struct ExecutionWrangler {
     msg_length: usize,
     compute_msg_length: bool,
     primitives: Box<dyn Primitives>,
-    store: Box<dyn Blockstore>,
 }
 
 impl ExecutionWrangler {
@@ -57,7 +57,6 @@ impl ExecutionWrangler {
         gas_fee_cap: TokenAmount,
         gas_premium: TokenAmount,
         compute_msg_length: bool,
-        store: Box<dyn Blockstore>,
     ) -> Self {
         Self {
             bench: RefCell::new(bench),
@@ -70,7 +69,6 @@ impl ExecutionWrangler {
             msg_length: 0,
             compute_msg_length,
             primitives: Box::new(FakePrimitives {}),
-            store,
         }
     }
 
@@ -126,10 +124,7 @@ impl ExecutionWrangler {
         self.bench.borrow().find_actor(id)
     }
 
-    pub fn find_actor_state<T: de::DeserializeOwned>(
-        &self,
-        id: ActorID,
-    ) -> anyhow::Result<Option<T>> {
+    pub fn find_actor_state<T: DeserializeOwned>(&self, id: ActorID) -> anyhow::Result<Option<T>> {
         let actor = self.bench.borrow().find_actor(id)?;
         Ok(match actor {
             Some(actor) => {
@@ -214,7 +209,7 @@ impl VM for ExecutionWrangler {
         let maybe_address = self.resolve_address(address).ok()?;
         let maybe_head = maybe_address.map(|id| {
             let maybe_actor = self.find_actor(id).ok().unwrap_or_default();
-            maybe_actor.map(|actor| actor.head)
+            maybe_actor.map(|actor| actor.state)
         });
         maybe_head?
     }
@@ -275,7 +270,7 @@ impl VM for ExecutionWrangler {
         todo!()
     }
 
-    fn actor(&self, address: &Address) -> Option<Actor> {
+    fn actor(&self, address: &Address) -> Option<ActorState> {
         let id = self.bench.borrow().resolve_address(address).ok()??;
         self.bench.borrow().find_actor(id).ok()?
     }
@@ -287,18 +282,6 @@ impl VM for ExecutionWrangler {
     fn primitives(&self) -> &dyn Primitives {
         self.primitives.as_ref()
     }
-
-    fn policy(&self) -> Policy {
-        Policy::default()
-    }
-
-    fn state_root(&self) -> Cid {
-        self.bench.borrow_mut().state_root()
-    }
-
-    fn total_fil(&self) -> TokenAmount {
-        self.bench.borrow().total_fil()
-    }
 }
 
 #[derive(Debug)]
@@ -306,14 +289,8 @@ pub struct TestVMError {
     msg: String,
 }
 
-pub fn actor(
-    code: Cid,
-    head: Cid,
-    call_seq_num: u64,
-    balance: TokenAmount,
-    predictable_address: Option<Address>,
-) -> Actor {
-    Actor { code, head, call_seq_num, balance, predictable_address }
+pub fn actor(code: Cid, state: Cid, sequence: u64, balance: TokenAmount) -> ActorState {
+    ActorState { code, state, sequence, balance }
 }
 
 impl fmt::Display for TestVMError {
@@ -389,22 +366,13 @@ pub trait VM {
     fn take_invocations(&self) -> Vec<InvocationTrace>;
 
     /// Get information about an actor
-    fn actor(&self, address: &Address) -> Option<Actor>;
+    fn actor(&self, address: &Address) -> Option<ActorState>;
 
     /// Build a map of all actors in the system and their type
     fn actor_manifest(&self) -> BiBTreeMap<Cid, Type>;
 
     /// Provides access to VM primitives
     fn primitives(&self) -> &dyn Primitives;
-
-    /// Get the current runtime policy
-    fn policy(&self) -> Policy;
-
-    /// Get the root Cid of the state tree
-    fn state_root(&self) -> Cid;
-
-    /// Get the total amount of FIL in circulation
-    fn total_fil(&self) -> TokenAmount;
 }
 
 impl From<ExecutionResult> for MessageResult {
