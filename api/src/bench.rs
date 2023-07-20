@@ -57,25 +57,23 @@ pub trait Bench {
 
     /// Returns the VM's current epoch.
     fn epoch(&self) -> ChainEpoch;
+
     /// Replaces the VM in the workbench with a new set to the specified epoch
     fn set_epoch(&mut self, epoch: ChainEpoch);
+
     /// Returns a reference to the VM's blockstore.
     fn store(&self) -> &dyn Blockstore;
+
     /// Looks up a top-level actor state object in the VM.
     /// Returns None if no such actor is found.
     fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>>;
+
     /// Resolves an address to an actor ID.
     /// Returns None if the address cannot be resolved.
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
-
-    /// Get the root cid of the state tree
-    fn state_root(&mut self) -> Cid;
 
     /// Flush the underlying executor. This is useful to force pending changes in the executor's
     /// BufferedBlockstore to be immediately written into the underlying Blockstore (which may be
     /// referenced elsewhere)
     fn flush(&mut self) -> Cid;
-
-    /// Get the total amount of FIL in circulation
-    fn total_fil(&self) -> TokenAmount;
 }

@@ -63,6 +63,12 @@ pub enum ExecutionEvent {
     },
 }
 
+// NOTE(alexytsu): the below invocation traces are copied fromthe builtin-actors repo.
+// these are used in tests to make assertions that certain calls were made
+// they differ from the above ExecutionTraces (which are low-level traces produced by the VM account for gas etc.)
+// TODO: derive invocation trace from execution trace. move invocation trace to a separate utility module
+// https://github.com/anorth/fvm-workbench/issues/19
+
 /// A trace of an actor method invocation.
 #[derive(Clone, Debug)]
 pub struct InvocationTrace {

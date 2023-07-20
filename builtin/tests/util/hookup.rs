@@ -1,6 +1,5 @@
 use fil_actors_runtime::INIT_ACTOR_ADDR;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
-use fvm_ipld_encoding::RawBytes;
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
@@ -42,8 +41,8 @@ fn test_hookup() {
         .unwrap();
 
     assert_eq!(ExitCode::OK, result.code);
-    // FIXME: shouldn't mangle/drop the traces
 
+    // TODO: re-enable traces after https://github.com/anorth/fvm-workbench/issues/19 is completed
     // println!("{}", result.trace.format());
     // let analysis = TraceAnalysis::build(result.trace);
     // println!("{}", analysis.format_spans());

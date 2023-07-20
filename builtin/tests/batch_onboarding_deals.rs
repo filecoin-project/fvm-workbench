@@ -1,6 +1,7 @@
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_ipld_hamt::BytesKey;
 use fvm_shared::address::Address;
+use fvm_shared::bigint::BigInt;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::deal::DealID;
 use fvm_shared::econ::TokenAmount;
@@ -37,7 +38,6 @@ use crate::util::*;
 use crate::workflows::*;
 mod util;
 
-// TODO: this test should be deleted and imported externally. the imported test should use a generic VM trait
 #[test]
 fn batch_onboarding_deals() {
     // create the execution wrangler
@@ -152,13 +152,13 @@ pub fn batch_onboarding_deals_test(v: &dyn VM) {
     let balances = miner_balance(v, &miner);
     assert!(balances.initial_pledge.is_positive());
 
-    // let network_stats = get_network_stats(v);
-    // assert_eq!(
-    //     network_stats.total_bytes_committed,
-    //     BigInt::from(sector_size as usize * BATCH_SIZE)
-    // );
-    // assert_eq!(network_stats.total_qa_bytes_committed, network_stats.total_bytes_committed * 10);
-    // assert!(network_stats.total_pledge_collateral.is_positive());
+    let network_stats = get_network_stats(v);
+    assert_eq!(
+        network_stats.total_bytes_committed,
+        BigInt::from(sector_size as usize * BATCH_SIZE)
+    );
+    assert_eq!(network_stats.total_qa_bytes_committed, network_stats.total_bytes_committed * 10);
+    assert!(network_stats.total_pledge_collateral.is_positive());
 }
 
 fn publish_deals(

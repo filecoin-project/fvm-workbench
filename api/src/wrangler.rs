@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use fvm_ipld_encoding::de::DeserializeOwned;
+use fvm_ipld_encoding::de;
 
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
@@ -249,6 +249,7 @@ impl VM for ExecutionWrangler {
     }
 
     fn take_invocations(&self) -> Vec<InvocationTrace> {
+        // TODO: after https://github.com/anorth/fvm-workbench/issues/19
         todo!()
     }
 
