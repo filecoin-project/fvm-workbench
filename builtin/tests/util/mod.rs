@@ -16,7 +16,7 @@ use fvm_ipld_encoding::serde::Serialize;
 use fvm_ipld_encoding::RawBytes;
 use fvm_shared::address::{Address, Protocol, FIRST_NON_SINGLETON_ADDR};
 use fvm_shared::clock::{ChainEpoch, QuantSpec};
-use fvm_shared::commcid::{FIL_COMMITMENT_SEALED, FIL_COMMITMENT_UNSEALED};
+use fvm_shared::commcid::FIL_COMMITMENT_SEALED;
 use fvm_shared::crypto::signature::Signature;
 use fvm_shared::deal::DealID;
 use fvm_shared::econ::TokenAmount;
@@ -25,8 +25,7 @@ use fvm_shared::sector::{RegisteredSealProof, SectorNumber};
 use fvm_shared::{ActorID, MethodNum};
 use fvm_workbench_api::blockstore::DynBlockstore;
 use fvm_workbench_api::wrangler::VM;
-use multihash::derive::Multihash;
-use multihash::MultihashDigest;
+use fvm_workbench_vm::bench::kernel::{make_cid, MhCode};
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
@@ -193,29 +192,6 @@ fn rng_from_seed(seed: u64) -> ChaCha8Rng {
         seed_arr[i] = *b;
     }
     ChaCha8Rng::from_seed(seed_arr)
-}
-
-pub fn make_cid(input: &[u8], prefix: u64, hash: MhCode) -> Cid {
-    let hash = hash.digest(input);
-    Cid::new_v1(prefix, hash)
-}
-
-pub fn make_cid_sha(input: &[u8], prefix: u64) -> Cid {
-    make_cid(input, prefix, MhCode::Sha256TruncPaddedFake)
-}
-
-pub fn make_piece_cid(input: &[u8]) -> Cid {
-    make_cid_sha(input, FIL_COMMITMENT_UNSEALED)
-}
-
-// multihash library doesn't support poseidon hashing, so we fake it
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Multihash)]
-#[mh(alloc_size = 64)]
-pub enum MhCode {
-    #[mh(code = 0xb401, hasher = multihash::Sha2_256)]
-    PoseidonFake,
-    #[mh(code = 0x1012, hasher = multihash::Sha2_256)]
-    Sha256TruncPaddedFake,
 }
 
 pub fn bf_all(bf: BitField) -> Vec<u64> {

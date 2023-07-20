@@ -14,6 +14,7 @@ pub mod analysis;
 pub mod bench;
 pub mod blockstore;
 pub mod trace;
+pub mod vm;
 pub mod wrangler;
 
 /// A factory for workbench instances.
