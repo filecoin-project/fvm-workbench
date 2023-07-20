@@ -18,13 +18,13 @@ edition = "2021"
 # however, currently, anorth/kernel-static is on fvm = 3.4.0 and fvm_shared = 3.3.1 
 # and patching to that requires upgrades of builtin-actors and helix/filecoin libraries
 [patch.crates-io]
-fvm = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
-fvm_ipld_hamt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
-fvm_ipld_amt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
-fvm_ipld_blockstore = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
-fvm_ipld_encoding = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
-fvm_shared = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
-fvm_sdk = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+# fvm = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+# fvm_ipld_hamt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+# fvm_ipld_amt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+# fvm_ipld_blockstore = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+# fvm_ipld_encoding = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+# fvm_shared = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
+# fvm_sdk = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/kernel-static"}
 
 ## Patches for local development
 # fvm = { path = "../../filecoin-project/ref-fvm/fvm" }

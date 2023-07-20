@@ -1,28 +1,15 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::error::Error;
 
 use anyhow::anyhow;
-use cid::multihash::{Code, MultihashDigest};
-use cid::Cid;
 use fvm_ipld_encoding::de::DeserializeOwned;
-use fvm_shared::crypto::signature::{
-    Signature, SECP_PUB_LEN, SECP_SIG_LEN, SECP_SIG_MESSAGE_HASH_SIZE,
-};
-use fvm_shared::error::ExitCode;
-use fvm_shared::piece::PieceInfo;
-use fvm_shared::sector::RegisteredSealProof;
-use std::fmt;
 
-use fil_actors_runtime::runtime::Primitives;
-use fil_actors_runtime::test_utils::{make_piece_cid, recover_secp_public_key};
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
 use fvm_ipld_encoding::{from_slice, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
-use fvm_shared::crypto::hash::SupportedHashes;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
@@ -30,6 +17,9 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use crate::trace::InvocationTrace;
 use crate::ActorState;
 pub use crate::{Bench, ExecutionResult};
+
+// TODO: import these from an external location
+pub use crate::vm::{FakePrimitives, MessageResult, Primitives, TestVMError, VM};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
@@ -203,15 +193,6 @@ impl VM for ExecutionWrangler {
         self.store.as_ref()
     }
 
-    fn actor_root(&self, address: &Address) -> Option<Cid> {
-        let maybe_address = self.resolve_address(address).ok()?;
-        let maybe_head = maybe_address.map(|id| {
-            let maybe_actor = self.find_actor(id).ok().unwrap_or_default();
-            maybe_actor.map(|actor| actor.state)
-        });
-        maybe_head?
-    }
-
     fn epoch(&self) -> ChainEpoch {
         self.bench.borrow().epoch()
     }
@@ -275,161 +256,5 @@ impl VM for ExecutionWrangler {
 
     fn primitives(&self) -> &dyn Primitives {
         self.primitives.as_ref()
-    }
-}
-
-#[derive(Debug)]
-pub struct TestVMError {
-    msg: String,
-}
-
-pub fn actor(code: Cid, state: Cid, sequence: u64, balance: TokenAmount) -> ActorState {
-    ActorState { code, state, sequence, balance }
-}
-
-impl fmt::Display for TestVMError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.msg)
-    }
-}
-
-impl Error for TestVMError {
-    fn description(&self) -> &str {
-        &self.msg
-    }
-}
-
-impl From<fvm_ipld_hamt::Error> for TestVMError {
-    fn from(h_err: fvm_ipld_hamt::Error) -> Self {
-        vm_err(h_err.to_string().as_str())
-    }
-}
-
-pub fn vm_err(msg: &str) -> TestVMError {
-    TestVMError { msg: msg.to_string() }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct MessageResult {
-    pub code: ExitCode,
-    pub message: String,
-    pub ret: Option<IpldBlock>,
-}
-
-/// An abstract VM that is injected into integration tests
-pub trait VM {
-    /// Returns the underlying blockstore of the VM
-    fn blockstore(&self) -> &dyn Blockstore;
-
-    /// Get the state root of the specified actor
-    fn actor_root(&self, address: &Address) -> Option<Cid>;
-
-    /// Get the current chain epoch
-    fn epoch(&self) -> ChainEpoch;
-
-    /// Get the balance of the specified actor
-    fn balance(&self, address: &Address) -> TokenAmount;
-
-    /// Get the ID for the specified address
-    fn resolve_id_address(&self, address: &Address) -> Option<Address>;
-
-    /// Send a message between the two specified actors
-    fn execute_message(
-        &self,
-        from: &Address,
-        to: &Address,
-        value: &TokenAmount,
-        method: MethodNum,
-        params: Option<IpldBlock>,
-    ) -> Result<MessageResult, TestVMError>;
-
-    /// Send a message without charging gas
-    fn execute_message_implicit(
-        &self,
-        from: &Address,
-        to: &Address,
-        value: &TokenAmount,
-        method: MethodNum,
-        params: Option<IpldBlock>,
-    ) -> Result<MessageResult, TestVMError>;
-
-    /// Sets the epoch to the specified value
-    fn set_epoch(&self, epoch: ChainEpoch);
-
-    /// Take all the invocations that have been made since the last call to this method
-    fn take_invocations(&self) -> Vec<InvocationTrace>;
-
-    /// Get information about an actor
-    fn actor(&self, address: &Address) -> Option<ActorState>;
-
-    /// Provides access to VM primitives
-    fn primitives(&self) -> &dyn Primitives;
-}
-
-impl From<ExecutionResult> for MessageResult {
-    fn from(value: ExecutionResult) -> Self {
-        Self {
-            code: value.receipt.exit_code,
-            message: value.message,
-            ret: value.receipt.return_data.into(),
-        }
-    }
-}
-
-// Fake implementation of runtime primitives.
-// Struct members can be added here to provide configurable functionality.
-pub struct FakePrimitives {}
-
-impl Primitives for FakePrimitives {
-    fn hash_blake2b(&self, data: &[u8]) -> [u8; 32] {
-        blake2b_simd::Params::new()
-            .hash_length(32)
-            .to_state()
-            .update(data)
-            .finalize()
-            .as_bytes()
-            .try_into()
-            .unwrap()
-    }
-
-    fn hash(&self, hasher: SupportedHashes, data: &[u8]) -> Vec<u8> {
-        let hasher = Code::try_from(hasher as u64).unwrap(); // supported hashes are all implemented in multihash
-        hasher.digest(data).digest().to_owned()
-    }
-
-    fn hash_64(&self, hasher: SupportedHashes, data: &[u8]) -> ([u8; 64], usize) {
-        let hasher = Code::try_from(hasher as u64).unwrap();
-        let (len, buf, ..) = hasher.digest(data).into_inner();
-        (buf, len as usize)
-    }
-
-    fn compute_unsealed_sector_cid(
-        &self,
-        _proof_type: RegisteredSealProof,
-        _pieces: &[PieceInfo],
-    ) -> Result<Cid, anyhow::Error> {
-        Ok(make_piece_cid(b"test data"))
-    }
-
-    fn verify_signature(
-        &self,
-        signature: &Signature,
-        _signer: &Address,
-        plaintext: &[u8],
-    ) -> Result<(), anyhow::Error> {
-        if signature.bytes != plaintext {
-            return Err(anyhow::format_err!(
-                "invalid signature (mock sig validation expects siggy bytes to be equal to plaintext)"
-            ));
-        }
-        Ok(())
-    }
-
-    fn recover_secp_public_key(
-        &self,
-        hash: &[u8; SECP_SIG_MESSAGE_HASH_SIZE],
-        signature: &[u8; SECP_SIG_LEN],
-    ) -> Result<[u8; SECP_PUB_LEN], anyhow::Error> {
-        recover_secp_public_key(hash, signature).map_err(|_| anyhow!("failed to recover pubkey"))
     }
 }
