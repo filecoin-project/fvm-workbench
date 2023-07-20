@@ -245,7 +245,7 @@ pub fn sector_deadline(v: &dyn VM, m: &Address, s: SectorNumber) -> (u64, u64) {
 }
 
 pub fn get_state<T: DeserializeOwned>(v: &dyn VM, a: &Address) -> Option<T> {
-    let cid = v.actor_root(a).unwrap();
+    let cid = v.actor(a).unwrap().state;
     v.blockstore().get(&cid).unwrap().map(|slice| fvm_ipld_encoding::from_slice(&slice).unwrap())
 }
 

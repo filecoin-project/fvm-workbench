@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
-use cid::Cid;
 use fvm_ipld_encoding::de::DeserializeOwned;
 
 use fvm_ipld_blockstore::Blockstore;
@@ -192,15 +191,6 @@ impl VM for ExecutionWrangler {
         // visible via our handle
         self.bench.borrow_mut().flush();
         self.store.as_ref()
-    }
-
-    fn actor_root(&self, address: &Address) -> Option<Cid> {
-        let maybe_address = self.resolve_address(address).ok()?;
-        let maybe_head = maybe_address.map(|id| {
-            let maybe_actor = self.find_actor(id).ok().unwrap_or_default();
-            maybe_actor.map(|actor| actor.state)
-        });
-        maybe_head?
     }
 
     fn epoch(&self) -> ChainEpoch {

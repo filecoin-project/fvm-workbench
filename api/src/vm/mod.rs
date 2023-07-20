@@ -28,7 +28,6 @@ use fvm_shared::MethodNum;
 use anyhow::anyhow;
 use cid::multihash::MultihashDigest;
 use cid::Cid;
-use multihash::derive::Multihash;
 use multihash::Code;
 
 use self::test_utils::{make_piece_cid, recover_secp_public_key};
@@ -41,9 +40,6 @@ pub mod test_utils;
 pub trait VM {
     /// Returns the underlying blockstore of the VM
     fn blockstore(&self) -> &dyn Blockstore;
-
-    /// Get the state root of the specified actor
-    fn actor_root(&self, address: &Address) -> Option<Cid>;
 
     /// Get the current chain epoch
     fn epoch(&self) -> ChainEpoch;
