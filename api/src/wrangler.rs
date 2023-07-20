@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use anyhow::anyhow;
-use bimap::BiBTreeMap;
 use cid::multihash::{Code, MultihashDigest};
 use cid::Cid;
 use fvm_ipld_encoding::de::DeserializeOwned;
@@ -15,7 +14,6 @@ use fvm_shared::piece::PieceInfo;
 use fvm_shared::sector::RegisteredSealProof;
 use std::fmt;
 
-use fil_actors_runtime::runtime::builtins::Type;
 use fil_actors_runtime::runtime::Primitives;
 use fil_actors_runtime::test_utils::{make_piece_cid, recover_secp_public_key};
 use fvm_ipld_blockstore::Blockstore;
@@ -275,10 +273,6 @@ impl VM for ExecutionWrangler {
         self.bench.borrow().find_actor(id).ok()?
     }
 
-    fn actor_manifest(&self) -> BiBTreeMap<Cid, Type> {
-        todo!()
-    }
-
     fn primitives(&self) -> &dyn Primitives {
         self.primitives.as_ref()
     }
@@ -367,9 +361,6 @@ pub trait VM {
 
     /// Get information about an actor
     fn actor(&self, address: &Address) -> Option<ActorState>;
-
-    /// Build a map of all actors in the system and their type
-    fn actor_manifest(&self) -> BiBTreeMap<Cid, Type>;
 
     /// Provides access to VM primitives
     fn primitives(&self) -> &dyn Primitives;
