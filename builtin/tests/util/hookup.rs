@@ -1,5 +1,6 @@
 use fil_actors_runtime::INIT_ACTOR_ADDR;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
+use fvm_ipld_encoding::RawBytes;
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;

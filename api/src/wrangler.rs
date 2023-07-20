@@ -112,7 +112,10 @@ impl ExecutionWrangler {
         self.bench.borrow().find_actor(id)
     }
 
-    pub fn find_actor_state<T: DeserializeOwned>(&self, id: ActorID) -> anyhow::Result<Option<T>> {
+    pub fn find_actor_state<T: de::DeserializeOwned>(
+        &self,
+        id: ActorID,
+    ) -> anyhow::Result<Option<T>> {
         let actor = self.bench.borrow().find_actor(id)?;
         Ok(match actor {
             Some(actor) => {
