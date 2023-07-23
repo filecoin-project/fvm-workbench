@@ -58,7 +58,7 @@ pub trait VM {
         value: &TokenAmount,
         method: MethodNum,
         params: Option<IpldBlock>,
-    ) -> Result<MessageResult, TestVMError>;
+    ) -> Result<MessageResult, VMError>;
 
     /// Send a message without charging gas
     fn execute_message_implicit(
@@ -68,7 +68,7 @@ pub trait VM {
         value: &TokenAmount,
         method: MethodNum,
         params: Option<IpldBlock>,
-    ) -> Result<MessageResult, TestVMError>;
+    ) -> Result<MessageResult, VMError>;
 
     /// Sets the epoch to the specified value
     fn set_epoch(&self, epoch: ChainEpoch);
@@ -186,30 +186,30 @@ impl Primitives for FakePrimitives {
 }
 
 #[derive(Debug)]
-pub struct TestVMError {
+pub struct VMError {
     pub msg: String,
 }
 
-impl fmt::Display for TestVMError {
+impl fmt::Display for VMError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.msg)
     }
 }
 
-impl Error for TestVMError {
+impl Error for VMError {
     fn description(&self) -> &str {
         &self.msg
     }
 }
 
-impl From<fvm_ipld_hamt::Error> for TestVMError {
+impl From<fvm_ipld_hamt::Error> for VMError {
     fn from(h_err: fvm_ipld_hamt::Error) -> Self {
         vm_err(h_err.to_string().as_str())
     }
 }
 
-pub fn vm_err(msg: &str) -> TestVMError {
-    TestVMError { msg: msg.to_string() }
+pub fn vm_err(msg: &str) -> VMError {
+    VMError { msg: msg.to_string() }
 }
 
 pub fn actor(code: Cid, state: Cid, sequence: u64, balance: TokenAmount) -> ActorState {

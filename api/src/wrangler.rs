@@ -19,7 +19,8 @@ use crate::ActorState;
 pub use crate::{Bench, ExecutionResult};
 
 // TODO: import these from an external location
-pub use crate::vm::{FakePrimitives, MessageResult, Primitives, TestVMError, VM};
+// https://github.com/anorth/fvm-workbench/issues/20
+pub use crate::vm::{FakePrimitives, MessageResult, Primitives, VMError, VM};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
@@ -221,11 +222,11 @@ impl VM for ExecutionWrangler {
         value: &TokenAmount,
         method: MethodNum,
         params: Option<IpldBlock>,
-    ) -> Result<MessageResult, TestVMError> {
+    ) -> Result<MessageResult, VMError> {
         let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
         match self.execute(*from, *to, method, raw_params, value.clone()) {
             Ok(res) => Ok(res.into()),
-            Err(e) => Err(TestVMError { msg: e.to_string() }),
+            Err(e) => Err(VMError { msg: e.to_string() }),
         }
     }
 
@@ -236,11 +237,11 @@ impl VM for ExecutionWrangler {
         value: &TokenAmount,
         method: MethodNum,
         params: Option<IpldBlock>,
-    ) -> Result<MessageResult, TestVMError> {
+    ) -> Result<MessageResult, VMError> {
         let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
         match self.execute_implicit(*from, *to, method, raw_params, value.clone()) {
             Ok(res) => Ok(res.into()),
-            Err(e) => Err(TestVMError { msg: e.to_string() }),
+            Err(e) => Err(VMError { msg: e.to_string() }),
         }
     }
 
