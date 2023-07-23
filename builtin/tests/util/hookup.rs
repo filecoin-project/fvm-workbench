@@ -1,14 +1,13 @@
 use fil_actors_runtime::INIT_ACTOR_ADDR;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
-use fvm_ipld_encoding::RawBytes;
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::METHOD_SEND;
-use fvm_workbench_api::analysis::TraceAnalysis;
-use fvm_workbench_api::wrangler::ExecutionWrangler;
+// use fvm_workbench_api::analysis::TraceAnalysis;
+use fvm_workbench_api::wrangler::{ExecutionWrangler, VM};
 use fvm_workbench_api::WorkbenchBuilder;
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
@@ -32,17 +31,19 @@ fn test_hookup() {
     let wrangler = ExecutionWrangler::new_default(bench, Box::new(store));
 
     let result = wrangler
-        .execute(
-            genesis.faucet_address(),
-            INIT_ACTOR_ADDR,
+        .execute_message(
+            &genesis.faucet_address(),
+            &INIT_ACTOR_ADDR,
+            &TokenAmount::zero(),
             METHOD_SEND,
-            RawBytes::default(),
-            TokenAmount::zero(),
+            None,
         )
         .unwrap();
 
-    assert_eq!(ExitCode::OK, result.receipt.exit_code);
-    println!("{}", result.trace.format());
-    let analysis = TraceAnalysis::build(result.trace);
-    println!("{}", analysis.format_spans());
+    assert_eq!(ExitCode::OK, result.code);
+
+    // TODO: re-enable traces after https://github.com/anorth/fvm-workbench/issues/19 is completed
+    // println!("{}", result.trace.format());
+    // let analysis = TraceAnalysis::build(result.trace);
+    // println!("{}", analysis.format_spans());
 }

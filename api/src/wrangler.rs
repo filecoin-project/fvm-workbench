@@ -2,8 +2,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use fvm_ipld_encoding::de;
+
 use fvm_ipld_blockstore::Blockstore;
-use fvm_ipld_encoding::{de, from_slice, RawBytes};
+use fvm_ipld_encoding::ipld_block::IpldBlock;
+use fvm_ipld_encoding::{from_slice, RawBytes};
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
@@ -11,7 +14,13 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 
-pub use crate::{ActorState, Bench, ExecutionResult};
+use crate::trace::InvocationTrace;
+use crate::ActorState;
+pub use crate::{Bench, ExecutionResult};
+
+// TODO: import these from an external location
+// https://github.com/anorth/fvm-workbench/issues/20
+pub use crate::vm::{FakePrimitives, MessageResult, Primitives, VMError, VM};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
@@ -23,6 +32,7 @@ pub struct ExecutionWrangler {
     sequences: RefCell<HashMap<Address, u64>>,
     msg_length: usize,
     compute_msg_length: bool,
+    primitives: Box<dyn Primitives>,
 }
 
 impl ExecutionWrangler {
@@ -47,6 +57,7 @@ impl ExecutionWrangler {
             sequences: RefCell::new(HashMap::new()),
             msg_length: 0,
             compute_msg_length,
+            primitives: Box::new(FakePrimitives {}),
         }
     }
 
@@ -145,7 +156,6 @@ impl ExecutionWrangler {
         self.store.as_ref()
     }
 
-    ///// Private helpers /////
     fn make_msg(
         &self,
         from: Address,
@@ -173,5 +183,83 @@ impl ExecutionWrangler {
             0 // FIXME serialize and size
         };
         (msg, msg_length)
+    }
+}
+
+impl VM for ExecutionWrangler {
+    fn blockstore(&self) -> &dyn Blockstore {
+        // It's unfortunate that we need to call flush here everytime we need the blockstore reference
+        // However, the state_tree inside Executor wraps whatever blockstore it's given with a BufferedBlockstore
+        // Since the store held by the Wrangler was cloned prior to being wrapped in the BufferedBlockstore, it's possible
+        // there are pending changes to the underlying blockstore held in the BufferedBlockstore's cache that are not
+        // visible via our handle
+        self.bench.borrow_mut().flush();
+        self.store.as_ref()
+    }
+
+    fn epoch(&self) -> ChainEpoch {
+        self.bench.borrow().epoch()
+    }
+
+    fn balance(&self, address: &Address) -> TokenAmount {
+        let maybe_address = self.resolve_address(address).unwrap();
+        let maybe_balance = maybe_address.map(|id| {
+            let maybe_actor = self.find_actor(id).ok().unwrap_or_default();
+            maybe_actor.map(|actor| actor.balance)
+        });
+        maybe_balance.unwrap().unwrap()
+    }
+
+    fn resolve_id_address(&self, address: &Address) -> Option<Address> {
+        let maybe_address = self.resolve_address(address).ok()?;
+        maybe_address.map(Address::new_id)
+    }
+
+    fn execute_message(
+        &self,
+        from: &Address,
+        to: &Address,
+        value: &TokenAmount,
+        method: MethodNum,
+        params: Option<IpldBlock>,
+    ) -> Result<MessageResult, VMError> {
+        let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
+        match self.execute(*from, *to, method, raw_params, value.clone()) {
+            Ok(res) => Ok(res.into()),
+            Err(e) => Err(VMError { msg: e.to_string() }),
+        }
+    }
+
+    fn execute_message_implicit(
+        &self,
+        from: &Address,
+        to: &Address,
+        value: &TokenAmount,
+        method: MethodNum,
+        params: Option<IpldBlock>,
+    ) -> Result<MessageResult, VMError> {
+        let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
+        match self.execute_implicit(*from, *to, method, raw_params, value.clone()) {
+            Ok(res) => Ok(res.into()),
+            Err(e) => Err(VMError { msg: e.to_string() }),
+        }
+    }
+
+    fn set_epoch(&self, epoch: ChainEpoch) {
+        self.bench.borrow_mut().set_epoch(epoch)
+    }
+
+    fn take_invocations(&self) -> Vec<InvocationTrace> {
+        // TODO: after https://github.com/anorth/fvm-workbench/issues/19
+        todo!()
+    }
+
+    fn actor(&self, address: &Address) -> Option<ActorState> {
+        let id = self.bench.borrow().resolve_address(address).ok()??;
+        self.bench.borrow().find_actor(id).ok()?
+    }
+
+    fn primitives(&self) -> &dyn Primitives {
+        self.primitives.as_ref()
     }
 }

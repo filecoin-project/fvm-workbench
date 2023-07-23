@@ -5,17 +5,9 @@ use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
-use fvm_shared::receipt::Receipt;
 use fvm_shared::ActorID;
 
-use crate::trace::ExecutionTrace;
-
-pub mod analysis;
-pub mod bench;
-pub mod blockstore;
-pub mod trace;
-pub mod vm;
-pub mod wrangler;
+use crate::{ActorState, ExecutionResult};
 
 /// A factory for workbench instances.
 /// Built-in actors must be installed before the workbench can be created.
@@ -65,49 +57,23 @@ pub trait Bench {
 
     /// Returns the VM's current epoch.
     fn epoch(&self) -> ChainEpoch;
+
     /// Replaces the VM in the workbench with a new set to the specified epoch
     fn set_epoch(&mut self, epoch: ChainEpoch);
+
     /// Returns a reference to the VM's blockstore.
     fn store(&self) -> &dyn Blockstore;
+
     /// Looks up a top-level actor state object in the VM.
     /// Returns None if no such actor is found.
     fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>>;
+
     /// Resolves an address to an actor ID.
     /// Returns None if the address cannot be resolved.
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
-    /// Flush underlying storage
+
+    /// Flush the underlying executor. This is useful to force pending changes in the executor's
+    /// BufferedBlockstore to be immediately written into the underlying Blockstore (which may be
+    /// referenced elsewhere)
     fn flush(&mut self) -> Cid;
-}
-
-/// The result of a message execution.
-/// This duplicates a lot from an FVM-internal type, but is independent of VM.
-#[derive(Clone, Debug)]
-pub struct ExecutionResult {
-    /// Message receipt for the transaction.
-    pub receipt: Receipt,
-    /// Gas penalty from transaction, if any.
-    pub penalty: TokenAmount,
-    /// Tip given to miner from message.
-    pub miner_tip: TokenAmount,
-
-    // Gas tracing
-    pub gas_burned: u64,
-    pub base_fee_burn: TokenAmount,
-    pub over_estimation_burn: TokenAmount,
-
-    /// Execution trace information, for debugging.
-    pub trace: ExecutionTrace,
-    pub message: String,
-}
-
-/// An actor root state object.
-pub struct ActorState {
-    /// Link to code for the actor.
-    pub code: Cid,
-    /// Link to the state of the actor.
-    pub state: Cid,
-    /// Sequence of the actor.
-    pub sequence: u64,
-    /// Tokens available to the actor.
-    pub balance: TokenAmount,
 }

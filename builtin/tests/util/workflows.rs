@@ -12,125 +12,110 @@ use fil_actors_runtime::{
     CRON_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ADDR, SYSTEM_ACTOR_ADDR, VERIFIED_REGISTRY_ACTOR_ADDR,
 };
 use fvm_ipld_encoding::{BytesDe, RawBytes};
-use fvm_shared::address::Address;
+use fvm_shared::address::{Address, BLS_PUB_LEN};
 use fvm_shared::bigint::Zero;
 use fvm_shared::clock::ChainEpoch;
-use fvm_shared::crypto::signature::SignatureType;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::randomness::Randomness;
 use fvm_shared::sector::{
     PoStProof, RegisteredPoStProof, RegisteredSealProof, SectorNumber, StoragePower,
 };
-use fvm_shared::{ActorID, METHOD_SEND};
-use fvm_workbench_api::wrangler::ExecutionResult;
-use fvm_workbench_api::wrangler::ExecutionWrangler;
+use fvm_shared::METHOD_SEND;
+use fvm_workbench_api::wrangler::VM;
 use fvm_workbench_vm::bench::kernel::TEST_VM_RAND_ARRAY;
+use rand_chacha::rand_core::RngCore;
 
 use super::*;
 
+// Generate count addresses by seeding an rng
+pub fn pk_addrs_from(seed: u64, count: u64) -> Vec<Address> {
+    let mut seed_arr = [0u8; 32];
+    for (i, b) in seed.to_ne_bytes().iter().enumerate() {
+        seed_arr[i] = *b;
+    }
+    let mut rng = ChaCha8Rng::from_seed(seed_arr);
+    (0..count).map(|_| new_bls_from_rng(&mut rng)).collect()
+}
+
+// Generate nice 32 byte arrays sampled uniformly at random based off of a u64 seed
+fn new_bls_from_rng(rng: &mut ChaCha8Rng) -> Address {
+    let mut bytes = [0u8; BLS_PUB_LEN];
+    rng.fill_bytes(&mut bytes);
+    Address::new_bls(&bytes).unwrap()
+}
+
 const ACCOUNT_SEED: u64 = 93837778;
 
-pub fn create_accounts(
-    w: &mut ExecutionWrangler,
-    faucet: ActorID,
-    count: u64,
-    balance: TokenAmount,
-    typ: SignatureType,
-) -> anyhow::Result<Vec<Account>> {
-    create_accounts_seeded(w, faucet, count, balance, typ, ACCOUNT_SEED)
+pub fn create_accounts(v: &dyn VM, count: u64, balance: &TokenAmount) -> Vec<Address> {
+    create_accounts_seeded(v, count, balance, ACCOUNT_SEED)
 }
 
 pub fn create_accounts_seeded(
-    w: &mut ExecutionWrangler,
-    faucet: ActorID,
+    v: &dyn VM,
     count: u64,
-    balance: TokenAmount,
-    typ: SignatureType,
+    balance: &TokenAmount,
     seed: u64,
-) -> anyhow::Result<Vec<Account>> {
-    let keys = match typ {
-        SignatureType::Secp256k1 => make_secp_keys(seed, count),
-        SignatureType::BLS => make_bls_keys(seed, count),
-    };
-
+) -> Vec<Address> {
+    let pk_addrs = pk_addrs_from(seed, count);
     // Send funds from faucet to pk address, creating account actor
-    for key in keys.iter() {
-        apply_ok(
-            w,
-            Address::new_id(faucet),
-            key.addr,
-            balance.clone(),
-            METHOD_SEND,
-            &RawBytes::default(),
-        )?;
+    for pk_addr in pk_addrs.clone() {
+        apply_ok_implicit(v, &TEST_FAUCET_ADDR, &pk_addr, balance, METHOD_SEND, None::<RawBytes>);
     }
-    // Resolve pk address to return ID of account actor
-    let ids: Vec<ActorID> =
-        keys.iter().map(|key| w.resolve_address(&key.addr).unwrap().unwrap()).collect();
-    let accounts =
-        keys.into_iter().enumerate().map(|(i, key)| Account { id: ids[i], key }).collect();
-    Ok(accounts)
+    // Normalize pk address to return id address of account actor
+    pk_addrs.iter().map(|pk_addr| v.resolve_id_address(pk_addr).unwrap()).collect()
 }
 
 pub fn market_add_balance(
-    w: &mut ExecutionWrangler,
+    v: &dyn VM,
     sender: &Address,
     beneficiary: &Address,
     amount: &TokenAmount,
 ) {
     apply_ok(
-        w,
-        *sender,
-        STORAGE_MARKET_ACTOR_ADDR,
-        amount.clone(),
+        v,
+        sender,
+        &STORAGE_MARKET_ACTOR_ADDR,
+        amount,
         MarketMethod::AddBalance as u64,
-        beneficiary,
-    )
-    .unwrap();
+        Some(beneficiary),
+    );
 }
-
 pub fn create_miner(
-    w: &mut ExecutionWrangler,
-    owner: ActorID,
-    worker: ActorID,
+    v: &dyn VM,
+    owner: &Address,
+    worker: &Address,
     post_proof_type: RegisteredPoStProof,
-    balance: TokenAmount,
-) -> anyhow::Result<(ActorID, Address)> {
+    balance: &TokenAmount,
+) -> (Address, Address) {
     let multiaddrs = vec![BytesDe("multiaddr".as_bytes().to_vec())];
     let peer_id = "miner".as_bytes().to_vec();
-    let owner = Address::new_id(owner);
     let params = CreateMinerParams {
-        owner,
-        worker: Address::new_id(worker),
+        owner: *owner,
+        worker: *worker,
         window_post_proof_type: post_proof_type,
         peer: peer_id,
         multiaddrs,
     };
 
-    let res: CreateMinerReturn = apply_ok(
-        w,
-        owner,
-        STORAGE_POWER_ACTOR_ADDR,
-        balance,
-        fil_actor_power::Method::CreateMiner as u64,
-        &params,
-    )?
-    .receipt
-    .return_data
-    .deserialize()?;
-    Ok((res.id_address.id().unwrap(), res.robust_address))
+    let params = IpldBlock::serialize_cbor(&params).unwrap().unwrap();
+    let res: CreateMinerReturn = v
+        .execute_message(
+            owner,
+            &STORAGE_POWER_ACTOR_ADDR,
+            balance,
+            fil_actor_power::Method::CreateMiner as u64,
+            Some(params),
+        )
+        .unwrap()
+        .ret
+        .unwrap()
+        .deserialize()
+        .unwrap();
+    (res.id_address, res.robust_address)
 }
 
-#[allow(dead_code)]
-pub fn verifreg_add_verifier(
-    w: &mut ExecutionWrangler,
-    verifier: ActorID,
-    data_cap: StoragePower,
-    root: Address,
-    root_signer: Address,
-) {
-    let add_verifier_params =
-        VerifierParams { address: Address::new_id(verifier), allowance: data_cap };
+pub fn verifreg_add_verifier(v: &dyn VM, verifier: &Address, data_cap: StoragePower) {
+    let add_verifier_params = VerifierParams { address: *verifier, allowance: data_cap };
     // root address is msig, send proposal from root key
     let proposal = ProposeParams {
         to: VERIFIED_REGISTRY_ACTOR_ADDR,
@@ -139,48 +124,101 @@ pub fn verifreg_add_verifier(
         params: serialize(&add_verifier_params, "verifreg add verifier params").unwrap(),
     };
 
-    apply_ok(w, root_signer, root, TokenAmount::zero(), MultisigMethod::Propose as u64, &proposal)
-        .unwrap();
+    apply_ok(
+        v,
+        &TEST_VERIFREG_ROOT_SIGNER_ADDR,
+        &TEST_VERIFREG_ROOT_ADDR,
+        &TokenAmount::zero(),
+        MultisigMethod::Propose as u64,
+        Some(proposal),
+    );
+    // ExpectInvocation {
+    //     from: TEST_VERIFREG_ROOT_SIGNER_ADDR,
+    //     to: TEST_VERIFREG_ROOT_ADDR,
+    //     method: MultisigMethod::Propose as u64,
+    //     subinvocs: Some(vec![ExpectInvocation {
+    //         from: TEST_VERIFREG_ROOT_ADDR,
+    //         to: VERIFIED_REGISTRY_ACTOR_ADDR,
+    //         method: VerifregMethod::AddVerifier as u64,
+    //         params: Some(IpldBlock::serialize_cbor(&add_verifier_params).unwrap()),
+    //         subinvocs: Some(vec![Expect::frc42_balance(
+    //             VERIFIED_REGISTRY_ACTOR_ADDR,
+    //             DATACAP_TOKEN_ACTOR_ADDR,
+    //             *verifier,
+    //         )]),
+    //         ..Default::default()
+    //     }]),
+    //     ..Default::default()
+    // }
+    // .matches(v.take_invocations().last().unwrap());
 }
 
-#[allow(dead_code)]
 pub fn verifreg_add_client(
-    w: &mut ExecutionWrangler,
-    verifier: Address,
-    client: Address,
+    v: &dyn VM,
+    verifier: &Address,
+    client: &Address,
     allowance: StoragePower,
 ) {
-    let add_client_params = AddVerifiedClientParams { address: client, allowance };
+    let add_client_params = AddVerifiedClientParams { address: *client, allowance };
     apply_ok(
-        w,
+        v,
         verifier,
-        VERIFIED_REGISTRY_ACTOR_ADDR,
-        TokenAmount::zero(),
+        &VERIFIED_REGISTRY_ACTOR_ADDR,
+        &TokenAmount::zero(),
         VerifregMethod::AddVerifiedClient as u64,
-        &add_client_params,
-    )
-    .unwrap();
+        Some(add_client_params),
+    );
+    // let allowance_tokens = TokenAmount::from_whole(allowance);
+    // ExpectInvocation {
+    //     from: *verifier,
+    //     to: VERIFIED_REGISTRY_ACTOR_ADDR,
+    //     method: VerifregMethod::AddVerifiedClient as u64,
+    //     subinvocs: Some(vec![ExpectInvocation {
+    //         from: VERIFIED_REGISTRY_ACTOR_ADDR,
+    //         to: DATACAP_TOKEN_ACTOR_ADDR,
+    //         method: DataCapMethod::MintExported as u64,
+    //         params: Some(
+    //             IpldBlock::serialize_cbor(&MintParams {
+    //                 to: *client,
+    //                 amount: allowance_tokens.clone(),
+    //                 operators: vec![STORAGE_MARKET_ACTOR_ADDR],
+    //             })
+    //             .unwrap(),
+    //         ),
+    //         subinvocs: Some(vec![Expect::frc46_receiver(
+    //             DATACAP_TOKEN_ACTOR_ADDR,
+    //             *client,
+    //             DATACAP_TOKEN_ACTOR_ID,
+    //             client.id().unwrap(),
+    //             VERIFIED_REGISTRY_ACTOR_ID,
+    //             allowance_tokens,
+    //             None,
+    //         )]),
+    //         ..Default::default()
+    //     }]),
+    //     ..Default::default()
+    // }
+    // .matches(v.take_invocations().last().unwrap());
 }
 
 #[allow(clippy::too_many_arguments)]
 pub fn precommit_sectors_v2(
-    w: &mut ExecutionWrangler,
+    v: &dyn VM,
     count: usize,
     batch_size: usize,
-    metadata: Vec<PrecommitMetadata>,
+    metadata: Vec<PrecommitMetadata>, // Per-sector deal metadata, or empty vector for no deals.
     worker: &Address,
     maddr: &Address,
     seal_proof: RegisteredSealProof,
     sector_number_base: SectorNumber,
-    _expect_cron_enroll: bool,
+    expect_cron_enroll: bool,
     exp: Option<ChainEpoch>,
     v2: bool,
 ) -> Vec<SectorPreCommitOnChainInfo> {
-    let mid = w.resolve_address(maddr).unwrap().unwrap();
-
+    let mid = v.resolve_id_address(maddr).unwrap();
     let expiration = match exp {
         None => {
-            w.epoch()
+            v.epoch()
                 + Policy::default().min_sector_expiration
                 + max_prove_commit_duration(&Policy::default(), seal_proof).unwrap()
         }
@@ -191,17 +229,19 @@ pub fn precommit_sectors_v2(
     let no_deals = PrecommitMetadata { deals: vec![], commd: CompactCommD::default() };
     let mut sectors_with_deals: Vec<SectorDeals> = vec![];
     while sector_idx < count {
+        let msg_sector_idx_base = sector_idx;
+        // let mut invocs = vec![Expect::reward_this_epoch(mid), Expect::power_current_total(mid)];
         if !v2 {
             let mut param_sectors = Vec::<PreCommitSectorParams>::new();
             let mut j = 0;
             while j < batch_size && sector_idx < count {
                 let sector_number = sector_number_base + sector_idx as u64;
-                let sector_meta = metadata.get(sector_idx).unwrap();
+                let sector_meta = metadata.get(sector_idx).unwrap_or(&no_deals);
                 param_sectors.push(PreCommitSectorParams {
                     seal_proof,
                     sector_number,
                     sealed_cid: make_sealed_cid(format!("sn: {}", sector_number).as_bytes()),
-                    seal_rand_epoch: w.epoch() - 1,
+                    seal_rand_epoch: v.epoch() - 1,
                     deal_ids: sector_meta.deals.clone().clone(),
                     expiration,
                     ..Default::default()
@@ -216,22 +256,44 @@ pub fn precommit_sectors_v2(
                 sector_idx += 1;
                 j += 1;
             }
+            if !sectors_with_deals.is_empty() {
+                // invocs.push(Expect::market_verify_deals(mid, sectors_with_deals.clone()));
+            }
+            if param_sectors.len() > 1 {
+                // invocs.push(Expect::burn(
+                //     mid,
+                //     Some(aggregate_pre_commit_network_fee(
+                //         param_sectors.len() as i64,
+                //         &TokenAmount::zero(),
+                //     )),
+                // ));
+            }
+            if expect_cron_enroll && msg_sector_idx_base == 0 {
+                // invocs.push(Expect::power_enrol_cron(mid));
+            }
 
-            let res = apply_ok(
-                w,
-                *worker,
-                *maddr,
-                TokenAmount::zero(),
+            apply_ok(
+                v,
+                worker,
+                maddr,
+                &TokenAmount::zero(),
                 MinerMethod::PreCommitSectorBatch as u64,
-                &PreCommitSectorBatchParams { sectors: param_sectors.clone() },
-            )
-            .unwrap();
-            assert_eq!(
-                ExitCode::OK,
-                res.receipt.exit_code,
-                "PreCommitSectorBatch failed {:?}",
-                res
+                Some(PreCommitSectorBatchParams { sectors: param_sectors.clone() }),
             );
+            // let expect = ExpectInvocation {
+            //     from: *worker,
+            //     to: mid,
+            //     method: MinerMethod::PreCommitSectorBatch as u64,
+            //     params: Some(
+            //         IpldBlock::serialize_cbor(&PreCommitSectorBatchParams {
+            //             sectors: param_sectors,
+            //         })
+            //         .unwrap(),
+            //     ),
+            //     subinvocs: Some(invocs),
+            //     ..Default::default()
+            // };
+            // expect.matches(v.take_invocations().last().unwrap())
         } else {
             let mut param_sectors = Vec::<SectorPreCommitInfo>::new();
             let mut j = 0;
@@ -242,7 +304,7 @@ pub fn precommit_sectors_v2(
                     seal_proof,
                     sector_number,
                     sealed_cid: make_sealed_cid(format!("sn: {}", sector_number).as_bytes()),
-                    seal_rand_epoch: w.epoch() - 1,
+                    seal_rand_epoch: v.epoch() - 1,
                     deal_ids: sector_meta.deals.clone(),
                     expiration,
                     unsealed_cid: sector_meta.commd.clone(),
@@ -257,31 +319,54 @@ pub fn precommit_sectors_v2(
                 sector_idx += 1;
                 j += 1;
             }
+            if !sectors_with_deals.is_empty() {
+                // invocs.push(Expect::market_verify_deals(mid, sectors_with_deals.clone()));
+            }
+            if param_sectors.len() > 1 {
+                // invocs.push(Expect::burn(
+                //     mid,
+                //     Some(aggregate_pre_commit_network_fee(
+                //         param_sectors.len() as i64,
+                //         &TokenAmount::zero(),
+                //     )),
+                // ));
+            }
+            if expect_cron_enroll && msg_sector_idx_base == 0 {
+                // invocs.push(Expect::power_enrol_cron(mid));
+            }
 
-            let res = apply_ok(
-                w,
-                *worker,
-                *maddr,
-                TokenAmount::zero(),
+            apply_ok(
+                v,
+                worker,
+                maddr,
+                &TokenAmount::zero(),
                 MinerMethod::PreCommitSectorBatch2 as u64,
-                &PreCommitSectorBatchParams2 { sectors: param_sectors.clone() },
-            )
-            .unwrap();
-            assert_eq!(
-                ExitCode::OK,
-                res.receipt.exit_code,
-                "PreCommitSectorBatch2 failed {:?}",
-                res
+                Some(PreCommitSectorBatchParams2 { sectors: param_sectors.clone() }),
             );
+
+            // let expect = ExpectInvocation {
+            //     from: *worker,
+            //     to: mid,
+            //     method: MinerMethod::PreCommitSectorBatch2 as u64,
+            //     params: Some(
+            //         IpldBlock::serialize_cbor(&PreCommitSectorBatchParams2 {
+            //             sectors: param_sectors,
+            //         })
+            //         .unwrap(),
+            //     ),
+            //     subinvocs: Some(invocs),
+            //     ..Default::default()
+            // };
+            // expect.matches(v.take_invocations().last().unwrap())
         }
     }
     // extract chain state
-    let mstate: MinerState = w.find_actor_state(mid).unwrap().unwrap();
+    let mstate: MinerState = get_state(v, &mid).unwrap();
     (0..count)
         .map(|i| {
             mstate
                 .get_precommitted_sector(
-                    &DynBlockstore::new(w.store()),
+                    &DynBlockstore::new(v.blockstore()),
                     sector_number_base + i as u64,
                 )
                 .unwrap()
@@ -291,13 +376,13 @@ pub fn precommit_sectors_v2(
 }
 
 pub fn submit_windowed_post(
-    w: &mut ExecutionWrangler,
+    v: &dyn VM,
     worker: &Address,
     maddr: &Address,
     dline_info: DeadlineInfo,
     partition_idx: u64,
     _new_power: Option<PowerPair>,
-) -> ExecutionResult {
+) {
     let params = SubmitWindowedPoStParams {
         deadline: dline_info.index,
         partitions: vec![PoStPartition { index: partition_idx, skipped: BitField::new() }],
@@ -309,64 +394,70 @@ pub fn submit_windowed_post(
         chain_commit_rand: Randomness(TEST_VM_RAND_ARRAY.into()),
     };
     apply_ok(
-        w,
-        *worker,
-        *maddr,
-        TokenAmount::zero(),
+        v,
+        worker,
+        maddr,
+        &TokenAmount::zero(),
         MinerMethod::SubmitWindowedPoSt as u64,
-        &params,
-    )
-    .unwrap()
+        Some(params),
+    );
+    // let mut subinvocs = None; // Unchecked unless provided
+    // if let Some(new_pow) = new_power {
+    //     if new_pow == PowerPair::zero() {
+    //         subinvocs = Some(vec![])
+    //     } else {
+    //         subinvocs = Some(vec![Expect::power_update_claim(*maddr, new_pow)])
+    //     }
+    // }
+
+    // ExpectInvocation {
+    //     from: *worker,
+    //     to: *maddr,
+    //     method: MinerMethod::SubmitWindowedPoSt as u64,
+    //     subinvocs,
+    //     ..Default::default()
+    // }
+    // .matches(v.take_invocations().last().unwrap());
 }
 
-fn advance_by_deadline<F>(w: &mut ExecutionWrangler, maddr: &Address, more: F) -> DeadlineInfo
+fn advance_by_deadline<F>(v: &dyn VM, maddr: &Address, more: F) -> DeadlineInfo
 where
     F: Fn(DeadlineInfo) -> bool,
 {
     loop {
-        let dline_info = miner_dline_info(w, maddr);
+        let dline_info = miner_dline_info(v, maddr);
         if !more(dline_info) {
             return dline_info;
         }
-        w.set_epoch(dline_info.last());
-        cron_tick(w);
-        let next = w.epoch() + 1;
-        w.set_epoch(next);
+        v.set_epoch(dline_info.last());
+        cron_tick(v);
+        let next = v.epoch() + 1;
+        v.set_epoch(next);
     }
 }
 
 pub fn advance_to_proving_deadline(
-    w: &mut ExecutionWrangler,
+    v: &dyn VM,
     maddr: &Address,
     s: SectorNumber,
 ) -> (DeadlineInfo, u64) {
-    let (d, p) = sector_deadline(w, maddr, s);
-    let dline_info = advance_by_deadline_to_index(w, maddr, d);
-    w.set_epoch(dline_info.open);
+    let (d, p) = sector_deadline(v, maddr, s);
+    let dline_info = advance_by_deadline_to_index(v, maddr, d);
+    v.set_epoch(dline_info.open);
     (dline_info, p)
 }
 
-pub fn advance_by_deadline_to_index(
-    w: &mut ExecutionWrangler,
-    maddr: &Address,
-    i: u64,
-) -> DeadlineInfo {
-    advance_by_deadline(w, maddr, |dline_info| dline_info.index != i)
+pub fn advance_by_deadline_to_index(v: &dyn VM, maddr: &Address, i: u64) -> DeadlineInfo {
+    advance_by_deadline(v, maddr, |dline_info| dline_info.index != i)
 }
 
-pub fn cron_tick(w: &mut ExecutionWrangler) {
-    println!("cron_tick: epoch {}", w.epoch());
-    let res = w
-        .execute_implicit(
-            SYSTEM_ACTOR_ADDR,
-            CRON_ACTOR_ADDR,
-            CronMethod::EpochTick as u64,
-            RawBytes::default(),
-            TokenAmount::zero(),
-        )
-        .unwrap();
-    if !res.receipt.exit_code.is_success() {
-        println!("cron_tick: failed: {:?}", res.receipt);
-        println!("cron_tick: failed: {:?}", res.trace.format());
-    }
+pub fn cron_tick(v: &dyn VM) {
+    apply_ok_implicit(
+        v,
+        &SYSTEM_ACTOR_ADDR,
+        &CRON_ACTOR_ADDR,
+        &TokenAmount::zero(),
+        CronMethod::EpochTick as u64,
+        None::<RawBytes>,
+    );
 }
