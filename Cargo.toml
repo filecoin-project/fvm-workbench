@@ -17,7 +17,7 @@ members = [
 cid = { version = "0.10.1", default-features = false }
 frc46_token = { version = "7.0.0" }
 # fvm feature=testing required to not be amazingly slow
-fvm = { version = "~3.2.0", default-features = false, features = ["testing"] }
+fvm = { version = "~3.5.0", default-features = false, features = ["testing"] }
 fvm_actor_utils = { version = "7.0.0" }
 fvm_ipld_bitfield = { version = "0.5.2"}
 fvm_ipld_blockstore = { version = "0.2.0" }
