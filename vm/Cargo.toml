@@ -9,18 +9,15 @@ edition = "2021"
 [dependencies]
 fvm-workbench-api = { path = "../api" }
 
-# fvm feature=testing required to not be amazingly slow
-fvm = { version = "3.2.0", default-features = false, features = ["testing"] }
-fvm_shared = { version = "3.4.0", default-features = false }
-fvm_ipld_hamt = "0.7.0"
-fvm_ipld_amt = { version = "0.5.1", features = ["go-interop"] }
-fvm_ipld_car = { version = "~0.7.0"}
-fvm_ipld_blockstore = { version = "0.2.0"}
-fvm_ipld_encoding = "0.4.0"
-replace_with = "0.1.7"
+fvm = { workspace = true }
+fvm_ipld_blockstore = { workspace = true }
+fvm_ipld_car = { workspace = true }
+fvm_ipld_encoding = { workspace = true }
+fvm_shared = { workspace = true }
 
 anyhow = "~1.0.47"
-cid = { version = "0.10.1", default-features = false }
+cid = { workspace = true }
 futures = "~0.3.19"
 multihash = { version = "0.18.1", default-features = false }
+replace_with = "0.1.7"
 thiserror = "~1.0.30"
