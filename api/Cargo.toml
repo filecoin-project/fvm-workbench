@@ -7,17 +7,15 @@ authors = ["@anorth"]
 edition = "2021"
 
 [dependencies]
-fvm_shared = { version = "3.4.0", default-features = false }
-fvm_ipld_hamt = "0.7.0"
-fvm_ipld_amt = { version = "0.6.0", features = ["go-interop"] }
-fvm_ipld_car = { version = "~0.7.0"}
-fvm_ipld_blockstore = { version = "0.2.0"}
-fvm_ipld_encoding = "0.4.0"
+fvm_ipld_blockstore = { workspace = true }
+fvm_ipld_encoding = { workspace = true }
+fvm_ipld_hamt = { workspace = true } 
+fvm_shared = { workspace = true }
 
 anyhow = "~1.0.47"
 blake2b_simd = { version = "1.0" }
 bimap = "0.6.2"
-cid = { version = "0.10.1", default-features = false }
+cid = { workspace = "true" }
 itertools = "~0.10.5"
 libsecp256k1 = { version = "0.7.1"}
 multihash = { version = "0.18.1", default-features = false, features=["sha2", "derive"] }

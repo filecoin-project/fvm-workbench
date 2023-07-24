@@ -13,6 +13,20 @@ license = "MIT OR Apache-2.0"
 authors = ["@anorth"]
 edition = "2021"
 
+[workspace.dependencies]
+cid = { version = "0.10.1", default-features = false }
+frc46_token = { version = "7.0.0" }
+# fvm feature=testing required to not be amazingly slow
+fvm = { version = "~3.2.0", default-features = false, features = ["testing"] }
+fvm_actor_utils = { version = "7.0.0" }
+fvm_ipld_bitfield = { version = "0.5.2"}
+fvm_ipld_blockstore = { version = "0.2.0" }
+fvm_ipld_car = { version = "0.7.0"}
+fvm_ipld_encoding = { version = "0.4.0" }
+fvm_ipld_hamt = { version = "0.7.0" }
+fvm_shared = { version = "~3.4.0", default-features = false }
+
+
 [patch.crates-io]
 # fvm = {git="https://github.com/helix-onchain/ref-fvm", branch="master"}
 # fvm_ipld_hamt = {git="https://github.com/helix-onchain/ref-fvm", branch="master"}
