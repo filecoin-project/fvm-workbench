@@ -15,7 +15,7 @@ fvm_shared = { workspace = true }
 anyhow = "~1.0.47"
 blake2b_simd = { version = "1.0" }
 bimap = "0.6.2"
-cid = { workspace = "true" }
+cid = { workspace = true }
 itertools = "~0.10.5"
 libsecp256k1 = { version = "0.7.1"}
 multihash = { version = "0.18.1", default-features = false, features=["sha2", "derive"] }
