@@ -21,9 +21,9 @@ use fvm_shared::sector::{
     PoStProof, RegisteredPoStProof, RegisteredSealProof, SectorNumber, StoragePower,
 };
 use fvm_shared::METHOD_SEND;
-use fvm_workbench_api::wrangler::VM;
 use fvm_workbench_vm::bench::kernel::TEST_VM_RAND_ARRAY;
 use rand_chacha::rand_core::RngCore;
+use vm_api::VM;
 
 use super::*;
 

@@ -13,7 +13,8 @@ use fvm_shared::message::Message;
 use fvm_shared::ActorID;
 use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
 use fvm_workbench_api::trace::ExecutionTrace;
-use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
+use fvm_workbench_api::{Bench, ExecutionResult};
+use vm_api::ActorState;
 
 use crate::externs::FakeExterns;
 
@@ -74,8 +75,11 @@ where
         Ok(raw.map(|a| ActorState {
             code: a.code,
             state: a.state,
-            sequence: a.sequence,
+            call_seq: a.sequence,
             balance: a.balance,
+            // TODO: possibly rename predictable address if these are the same concept
+            // in ref-fvm predictable address is assigned to delegated address in some instances
+            predictable_address: a.delegated_address,
         }))
     }
 

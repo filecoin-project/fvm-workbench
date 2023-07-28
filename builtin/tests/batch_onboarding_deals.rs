@@ -10,14 +10,13 @@ use fvm_shared::sector::{RegisteredSealProof, StoragePower};
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_workbench_api::blockstore::DynBlockstore;
-use fvm_workbench_api::{
-    wrangler::{ExecutionWrangler, VM},
-    WorkbenchBuilder,
-};
+use fvm_workbench_api::{wrangler::ExecutionWrangler, WorkbenchBuilder};
 use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
+use fvm_workbench_vm::primitives::FakePrimitives;
 use num_traits::Zero;
+use vm_api::VM;
 
 use fil_actor_market::{deal_id_key, DealProposal};
 use fil_actor_miner::{
@@ -53,7 +52,7 @@ fn batch_onboarding_deals() {
     let spec = GenesisSpec::default(manifest_data_cid);
     let _genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let bench = builder.build().unwrap();
-    let w = ExecutionWrangler::new_default(bench, Box::new(store));
+    let w = ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}));
 
     batch_onboarding_deals_test(&w);
 }

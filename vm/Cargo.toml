@@ -14,10 +14,12 @@ fvm_ipld_blockstore = { workspace = true }
 fvm_ipld_car = { workspace = true }
 fvm_ipld_encoding = { workspace = true }
 fvm_shared = { workspace = true }
+vm_api = { workspace = true }
 
 anyhow = "~1.0.47"
+blake2b_simd = { version = "1.0" }
 cid = { workspace = true }
-futures = "~0.3.19"
-multihash = { version = "0.18.1", default-features = false }
-replace_with = "0.1.7"
-thiserror = "~1.0.30"
+futures = { workspace = true } 
+libsecp256k1 = { workspace = true }
+multihash = { workspace = true }
+replace_with = { workspace = true }

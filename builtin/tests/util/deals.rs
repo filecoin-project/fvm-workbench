@@ -11,9 +11,9 @@ use fvm_shared::crypto::signature::{Signature, SignatureType};
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::ExitCode;
 use fvm_shared::piece::PaddedPieceSize;
-use fvm_workbench_api::vm::test_utils::make_piece_cid;
-use fvm_workbench_api::wrangler::VM;
+use fvm_workbench_vm::bench::kernel::make_piece_cid;
 use num_traits::Zero;
+use vm_api::VM;
 
 use crate::util::{apply_ok, serialize_ok};
 

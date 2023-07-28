@@ -9,15 +9,10 @@ edition = "2021"
 [dependencies]
 fvm_ipld_blockstore = { workspace = true }
 fvm_ipld_encoding = { workspace = true }
-fvm_ipld_hamt = { workspace = true } 
 fvm_shared = { workspace = true }
+vm_api = { workspace = true }
 
 anyhow = "~1.0.47"
-blake2b_simd = { version = "1.0" }
-bimap = "0.6.2"
 cid = { workspace = true }
 itertools = "~0.10.5"
-libsecp256k1 = { version = "0.7.1"}
-multihash = { version = "0.18.1", default-features = false, features=["sha2", "derive"] }
 num-format = "0.4.4"
-thiserror = "~1.0.30"

@@ -29,10 +29,10 @@ use fvm_shared::sector::{RegisteredSealProof, SectorNumber, StoragePower};
 use fvm_shared::smooth::FilterEstimate;
 use fvm_shared::{ActorID, MethodNum};
 use fvm_workbench_api::blockstore::DynBlockstore;
-use fvm_workbench_api::wrangler::VM;
 use fvm_workbench_vm::bench::kernel::{make_cid, MhCode};
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use vm_api::VM;
 
 pub mod deals;
 pub mod hookup;

@@ -7,15 +7,15 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::receipt::Receipt;
 use fvm_shared::ActorID;
-
-use crate::trace::ExecutionTrace;
+use vm_api::{ActorState, MessageResult};
 
 pub mod analysis;
 pub mod bench;
 pub mod blockstore;
 pub mod trace;
-pub mod vm;
 pub mod wrangler;
+
+use trace::ExecutionTrace;
 
 /// A factory for workbench instances.
 /// Built-in actors must be installed before the workbench can be created.
@@ -100,14 +100,12 @@ pub struct ExecutionResult {
     pub message: String,
 }
 
-/// An actor root state object.
-pub struct ActorState {
-    /// Link to code for the actor.
-    pub code: Cid,
-    /// Link to the state of the actor.
-    pub state: Cid,
-    /// Sequence of the actor.
-    pub sequence: u64,
-    /// Tokens available to the actor.
-    pub balance: TokenAmount,
+impl From<ExecutionResult> for MessageResult {
+    fn from(execution_res: ExecutionResult) -> MessageResult {
+        MessageResult {
+            code: execution_res.receipt.exit_code,
+            ret: execution_res.receipt.return_data.into(),
+            message: execution_res.message,
+        }
+    }
 }
