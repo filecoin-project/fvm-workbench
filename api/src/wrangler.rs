@@ -1,7 +1,8 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use anyhow::anyhow;
+use cid::Cid;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::de;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
@@ -287,8 +288,8 @@ impl VM for ExecutionWrangler {
         self.circulating_supply.borrow().clone()
     }
 
-    fn actor_manifest(&self) -> std::collections::BTreeMap<cid::Cid, vm_api::Type> {
-        todo!()
+    fn actor_manifest(&self) -> BTreeMap<Cid, vm_api::Type> {
+        self.bench.borrow().builtin_actors_manifest()
     }
 
     fn state_root(&self) -> cid::Cid {

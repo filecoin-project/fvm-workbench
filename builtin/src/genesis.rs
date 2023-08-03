@@ -1,4 +1,5 @@
 use cid::Cid;
+use fil_actors_integration_tests::TEST_FAUCET_ADDR;
 use fil_actors_runtime::runtime::builtins::Type;
 use fil_actors_runtime::{
     make_empty_map, BURNT_FUNDS_ACTOR_ADDR, BURNT_FUNDS_ACTOR_ID, CRON_ACTOR_ID,
@@ -178,7 +179,7 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
     )?;
 
     // Faucet account
-    let faucet_id = BURNT_FUNDS_ACTOR_ID - 1;
+    let faucet_id = TEST_FAUCET_ADDR.id().unwrap();
     let faucet_state = fil_actor_account::State { address: Address::new_id(faucet_id) };
     builder.create_singleton_actor(
         Type::Account as u32,

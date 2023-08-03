@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use anyhow::anyhow;
 
 use cid::Cid;
@@ -125,6 +127,68 @@ where
 
     fn flush(&mut self) -> Cid {
         self.executor.flush().unwrap()
+    }
+
+    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::Type> {
+        let manifest = self.executor.builtin_actors();
+        let mut map = BTreeMap::new();
+
+        let init = manifest.code_by_id(2);
+        if let Some(code) = init {
+            map.insert(*code, vm_api::Type::Init);
+        }
+
+        let cron = manifest.code_by_id(3);
+        if let Some(code) = cron {
+            map.insert(*code, vm_api::Type::Cron);
+        }
+
+        let account = manifest.code_by_id(4);
+        if let Some(code) = account {
+            map.insert(*code, vm_api::Type::Account);
+        }
+
+        let power = manifest.code_by_id(5);
+        if let Some(code) = power {
+            map.insert(*code, vm_api::Type::Power);
+        }
+
+        let miner = manifest.code_by_id(6);
+        if let Some(code) = miner {
+            map.insert(*code, vm_api::Type::Miner);
+        }
+
+        let market = manifest.code_by_id(7);
+        if let Some(code) = market {
+            map.insert(*code, vm_api::Type::Market);
+        }
+
+        let payment_channel = manifest.code_by_id(8);
+        if let Some(code) = payment_channel {
+            map.insert(*code, vm_api::Type::PaymentChannel);
+        }
+
+        let multisig = manifest.code_by_id(9);
+        if let Some(code) = multisig {
+            map.insert(*code, vm_api::Type::Multisig);
+        }
+
+        let reward = manifest.code_by_id(10);
+        if let Some(code) = reward {
+            map.insert(*code, vm_api::Type::Reward);
+        }
+
+        let verifreg = manifest.code_by_id(11);
+        if let Some(code) = verifreg {
+            map.insert(*code, vm_api::Type::Reward);
+        }
+
+        let datacap = manifest.code_by_id(12);
+        if let Some(code) = datacap {
+            map.insert(*code, vm_api::Type::DataCap);
+        }
+
+        map
     }
 }
 

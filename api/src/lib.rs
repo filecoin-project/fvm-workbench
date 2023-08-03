@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use cid::Cid;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ser::Serialize;
@@ -77,6 +79,9 @@ pub trait Bench {
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
     /// Flush underlying storage
     fn flush(&mut self) -> Cid;
+
+    /// Get a manifest of the builtin actors
+    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::Type>;
 }
 
 /// The result of a message execution.

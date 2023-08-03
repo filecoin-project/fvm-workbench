@@ -1802,7 +1802,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_account"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "fil_actors_runtime",
@@ -1838,7 +1837,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_cron"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore 0.2.0",
@@ -1853,7 +1851,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_datacap"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "cid 0.10.1",
  "fil_actors_runtime",
@@ -1874,11 +1871,10 @@ dependencies = [
 [[package]]
 name = "fil_actor_eam"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
- "fil_actors_evm_shared",
+ "fil_actors_evm_shared 12.0.0",
  "fil_actors_runtime",
  "fvm_ipld_blockstore 0.2.0",
  "fvm_ipld_encoding 0.4.0",
@@ -1889,6 +1885,42 @@ dependencies = [
  "num-derive",
  "num-traits",
  "rlp",
+ "serde",
+]
+
+[[package]]
+name = "fil_actor_eam"
+version = "12.0.0"
+source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
+dependencies = [
+ "anyhow",
+ "cid 0.10.1",
+ "fil_actors_evm_shared 12.0.0 (git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68)",
+ "fil_actors_runtime",
+ "fvm_ipld_blockstore 0.2.0",
+ "fvm_ipld_encoding 0.4.0",
+ "fvm_shared",
+ "hex-literal",
+ "log",
+ "multihash 0.18.1",
+ "num-derive",
+ "num-traits",
+ "rlp",
+ "serde",
+]
+
+[[package]]
+name = "fil_actor_ethaccount"
+version = "12.0.0"
+dependencies = [
+ "fil_actors_runtime",
+ "frc42_dispatch",
+ "fvm_actor_utils",
+ "fvm_ipld_encoding 0.4.0",
+ "fvm_shared",
+ "hex-literal",
+ "num-derive",
+ "num-traits",
  "serde",
 ]
 
@@ -1911,11 +1943,34 @@ dependencies = [
 [[package]]
 name = "fil_actor_evm"
 version = "12.0.0"
+dependencies = [
+ "anyhow",
+ "cid 0.10.1",
+ "fil_actors_evm_shared 12.0.0",
+ "fil_actors_runtime",
+ "frc42_dispatch",
+ "fvm_ipld_blockstore 0.2.0",
+ "fvm_ipld_encoding 0.4.0",
+ "fvm_ipld_kamt",
+ "fvm_shared",
+ "hex",
+ "hex-literal",
+ "log",
+ "multihash 0.18.1",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "substrate-bn",
+]
+
+[[package]]
+name = "fil_actor_evm"
+version = "12.0.0"
 source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
- "fil_actors_evm_shared",
+ "fil_actors_evm_shared 12.0.0 (git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68)",
  "fil_actors_runtime",
  "frc42_dispatch",
  "fvm_ipld_blockstore 0.2.0",
@@ -1935,7 +1990,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_init"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -1954,7 +2008,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_market"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -1977,7 +2030,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_miner"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -2002,7 +2054,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_multisig"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -2023,7 +2074,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_paych"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -2045,7 +2095,6 @@ source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12b
 [[package]]
 name = "fil_actor_power"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -2067,7 +2116,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_reward"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "fil_actors_runtime",
  "fvm_ipld_blockstore 0.2.0",
@@ -2083,7 +2131,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_system"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -2099,7 +2146,6 @@ dependencies = [
 [[package]]
 name = "fil_actor_verifreg"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -2121,6 +2167,18 @@ dependencies = [
 [[package]]
 name = "fil_actors_evm_shared"
 version = "12.0.0"
+dependencies = [
+ "fil_actors_runtime",
+ "fvm_ipld_encoding 0.4.0",
+ "fvm_shared",
+ "hex",
+ "serde",
+ "uint",
+]
+
+[[package]]
+name = "fil_actors_evm_shared"
+version = "12.0.0"
 source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "fil_actors_runtime",
@@ -2134,7 +2192,6 @@ dependencies = [
 [[package]]
 name = "fil_actors_integration_tests"
 version = "1.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "bimap",
@@ -2144,9 +2201,9 @@ dependencies = [
  "fil_actor_account",
  "fil_actor_cron",
  "fil_actor_datacap",
- "fil_actor_eam",
- "fil_actor_ethaccount",
- "fil_actor_evm",
+ "fil_actor_eam 12.0.0",
+ "fil_actor_ethaccount 12.0.0",
+ "fil_actor_evm 12.0.0",
  "fil_actor_init",
  "fil_actor_market",
  "fil_actor_miner",
@@ -2156,7 +2213,7 @@ dependencies = [
  "fil_actor_reward",
  "fil_actor_system",
  "fil_actor_verifreg",
- "fil_actors_evm_shared",
+ "fil_actors_evm_shared 12.0.0",
  "fil_actors_runtime",
  "fil_builtin_actors_state",
  "frc42_dispatch",
@@ -2186,7 +2243,6 @@ dependencies = [
 [[package]]
 name = "fil_actors_runtime"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "blake2b_simd",
@@ -2231,9 +2287,9 @@ dependencies = [
  "fil_actor_bundler",
  "fil_actor_cron",
  "fil_actor_datacap",
- "fil_actor_eam",
- "fil_actor_ethaccount",
- "fil_actor_evm",
+ "fil_actor_eam 12.0.0 (git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68)",
+ "fil_actor_ethaccount 12.0.0 (git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68)",
+ "fil_actor_evm 12.0.0 (git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68)",
  "fil_actor_init",
  "fil_actor_market",
  "fil_actor_miner",
@@ -2251,7 +2307,6 @@ dependencies = [
 [[package]]
 name = "fil_builtin_actors_state"
 version = "12.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "bimap",
@@ -5485,7 +5540,6 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 [[package]]
 name = "vm_api"
 version = "1.0.0"
-source = "git+https://github.com/filecoin-project/builtin-actors?rev=0679eecb12bf2ec7091866c442f410062b21bf68#0679eecb12bf2ec7091866c442f410062b21bf68"
 dependencies = [
  "anyhow",
  "cid 0.10.1",
@@ -6053,3 +6107,7 @@ dependencies = [
  "quote",
  "syn 2.0.28",
 ]
+
+[[patch.unused]]
+name = "fil_builtin_actors_bundle"
+version = "12.0.0"
