@@ -32,9 +32,9 @@ const BATCH_SIZE: usize = 8;
 const PRECOMMIT_V2: bool = true;
 const SEAL_PROOF: RegisteredSealProof = RegisteredSealProof::StackedDRG32GiBV1P1;
 
-use crate::util::deals::{DealBatcher, DealOptions};
 use crate::util::*;
 use crate::workflows::*;
+use fil_actors_integration_tests::deals::{DealBatcher, DealOptions};
 mod util;
 
 #[test]
@@ -46,7 +46,7 @@ fn batch_onboarding_deals() {
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
-        actors_v12::BUNDLE_CAR,
+        fil_builtin_actors_bundle::BUNDLE_CAR,
     )
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);

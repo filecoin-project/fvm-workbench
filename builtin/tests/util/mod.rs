@@ -34,7 +34,6 @@ use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use vm_api::VM;
 
-pub mod deals;
 pub mod hookup;
 pub mod workflows;
 

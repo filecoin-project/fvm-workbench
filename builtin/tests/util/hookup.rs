@@ -23,7 +23,7 @@ fn test_hookup() {
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
-        actors_v12::BUNDLE_CAR,
+        fil_builtin_actors_bundle::BUNDLE_CAR,
     )
     .unwrap();
 
