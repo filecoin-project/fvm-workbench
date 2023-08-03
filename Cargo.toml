@@ -26,6 +26,7 @@ fvm_ipld_encoding = { version = "0.4.0" }
 fvm_ipld_hamt = { version = "0.7.0" }
 fvm_shared = { version = "~3.4.0", default-features = false }
 
+fil_builtin_actors_bundle = { package="fil_builtin_actors_bundle", version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "0679eecb12bf2ec7091866c442f410062b21bf68" }
 fil_builtin_actors_state = { version = "1.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "0679eecb12bf2ec7091866c442f410062b21bf68" }
 fil_actor_account = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "0679eecb12bf2ec7091866c442f410062b21bf68", features = [] }
 fil_actor_cron = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "0679eecb12bf2ec7091866c442f410062b21bf68", features = [] }
@@ -54,14 +55,16 @@ rand_chacha = "~0.3"
 replace_with = "0.1.7"
 
 [patch.crates-io]
-fvm = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
-fvm_ipld_hamt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
-fvm_ipld_amt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
-fvm_ipld_blockstore = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
-fvm_ipld_encoding = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
-fvm_shared = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
-fvm_sdk = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
-fil_builtin_actors_bundle = { git = "https://github.com/filecoin-project/builtin-actors", rev = "0679eecb12bf2ec7091866c442f410062b21bf68" }
+# even though the dep is specified as a git repo in dependencies, cargo tries to pick from crates.io without this patch
+fil_builtin_actors_bundle = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "0679eecb12bf2ec7091866c442f410062b21bf68" }
+
+# fvm = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
+# fvm_ipld_hamt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
+# fvm_ipld_amt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
+# fvm_ipld_blockstore = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
+# fvm_ipld_encoding = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
+# fvm_shared = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
+# fvm_sdk = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
 
 ## Patches for local development
 # fvm = { path = "../../filecoin-project/ref-fvm/fvm" }

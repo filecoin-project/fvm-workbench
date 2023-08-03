@@ -11,7 +11,7 @@ fvm-workbench-vm = { path = "../vm" }
 fvm-workbench-api = { path = "../api" }
 
 # depend on a mainline actors v12 commit with v3.2 depednencies
-fil_builtin_actors_bundle = { workspace = "true"  }
+fil_builtin_actors_bundle = { version = "12.0.0", workspace = "true"  }
 fil_actor_account = { workspace = true }
 fil_actor_cron = { workspace = true }
 fil_actor_datacap = { workspace = true }

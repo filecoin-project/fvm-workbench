@@ -9,7 +9,9 @@ use fvm_shared::METHOD_SEND;
 // use fvm_workbench_api::analysis::TraceAnalysis;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_api::WorkbenchBuilder;
-use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
+use fvm_workbench_builtin_actors::genesis::{
+    create_genesis_actors, GenesisSpec, BUILTIN_ACTORS_BUNDLE,
+};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
 use fvm_workbench_vm::primitives::FakePrimitives;
@@ -23,7 +25,7 @@ fn test_hookup() {
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
-        fil_builtin_actors_bundle::BUNDLE_CAR,
+        BUILTIN_ACTORS_BUNDLE,
     )
     .unwrap();
 
