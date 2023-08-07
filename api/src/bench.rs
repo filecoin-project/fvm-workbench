@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use cid::Cid;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_ipld_encoding::ser::Serialize;
@@ -76,4 +78,7 @@ pub trait Bench {
     /// BufferedBlockstore to be immediately written into the underlying Blockstore (which may be
     /// referenced elsewhere)
     fn flush(&mut self) -> Cid;
+
+    /// Get a manifest of the builtin actors
+    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::Type>;
 }

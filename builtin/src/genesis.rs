@@ -14,7 +14,7 @@ use fvm_shared::sector::StoragePower;
 use fvm_shared::{ActorID, HAMT_BIT_WIDTH};
 
 pub use fil_builtin_actors_bundle::BUNDLE_CAR as BUILTIN_ACTORS_BUNDLE;
-pub use fvm_workbench_api::WorkbenchBuilder;
+pub use fvm_workbench_api::bench::WorkbenchBuilder;
 
 /// A specification for installing built-in actors to seed a VM.
 pub struct GenesisSpec {
@@ -67,7 +67,9 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
     )?;
 
     // Init actor
-    let init_state = fil_actor_init::State::new(builder.store(), "workbench".to_string())?;
+    let test_faucet_id = TEST_FAUCET_ADDR.id().unwrap();
+    let mut init_state = fil_actor_init::State::new(builder.store(), "workbench".to_string())?;
+    init_state.next_id = test_faucet_id + 1;
     builder.create_singleton_actor(
         Type::Init as u32,
         INIT_ACTOR_ID,
@@ -179,13 +181,12 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
     )?;
 
     // Faucet account
-    let faucet_id = TEST_FAUCET_ADDR.id().unwrap();
-    let faucet_state = fil_actor_account::State { address: Address::new_id(faucet_id) };
+    let faucet_state = fil_actor_account::State { address: Address::new_id(test_faucet_id) };
     builder.create_singleton_actor(
         Type::Account as u32,
-        faucet_id,
+        test_faucet_id,
         &faucet_state,
         spec.faucet_balance.clone(),
     )?;
-    Ok(GenesisResult { verifreg_signer_id, verifreg_root_id, faucet_id })
+    Ok(GenesisResult { verifreg_signer_id, verifreg_root_id, faucet_id: test_faucet_id })
 }

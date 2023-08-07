@@ -7,8 +7,8 @@ use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::METHOD_SEND;
 // use fvm_workbench_api::analysis::TraceAnalysis;
+use fvm_workbench_api::bench::WorkbenchBuilder;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
-use fvm_workbench_api::WorkbenchBuilder;
 use fvm_workbench_builtin_actors::genesis::{
     create_genesis_actors, GenesisSpec, BUILTIN_ACTORS_BUNDLE,
 };

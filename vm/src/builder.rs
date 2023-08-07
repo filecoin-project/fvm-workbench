@@ -15,7 +15,7 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::ActorID;
-use fvm_workbench_api::{Bench, WorkbenchBuilder};
+use fvm_workbench_api::bench::{Bench, WorkbenchBuilder};
 use multihash::Code;
 
 use crate::bench::{BenchKernel, FvmBench};

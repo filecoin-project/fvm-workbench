@@ -16,7 +16,7 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use vm_api::trace::InvocationTrace;
 use vm_api::{vm_err, ActorState, MessageResult, Primitives, VMError, VM};
 
-pub use crate::{Bench, ExecutionResult};
+pub use crate::{bench::Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,

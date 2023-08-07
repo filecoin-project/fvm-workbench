@@ -15,7 +15,7 @@ use fvm_shared::message::Message;
 use fvm_shared::ActorID;
 use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
 use fvm_workbench_api::trace::ExecutionTrace;
-use fvm_workbench_api::{Bench, ExecutionResult};
+use fvm_workbench_api::{bench::Bench, ExecutionResult};
 use vm_api::ActorState;
 
 use crate::externs::FakeExterns;
