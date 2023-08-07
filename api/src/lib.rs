@@ -31,7 +31,6 @@ pub struct ExecutionResult {
     pub message: String,
 }
 
-// TODO: move this outside of API as MessageResult is a builtin's type
 impl From<ExecutionResult> for MessageResult {
     fn from(execution_res: ExecutionResult) -> MessageResult {
         MessageResult {

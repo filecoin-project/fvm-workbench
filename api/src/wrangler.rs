@@ -293,6 +293,6 @@ impl VM for ExecutionWrangler {
     }
 
     fn state_root(&self) -> cid::Cid {
-        todo!()
+        self.bench.borrow_mut().flush()
     }
 }
