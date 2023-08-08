@@ -25,7 +25,6 @@ pub struct ExecutionWrangler {
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
     gas_premium: TokenAmount,
-    circulating_supply: RefCell<TokenAmount>,
     sequences: RefCell<HashMap<Address, u64>>,
     msg_length: usize,
     compute_msg_length: bool,
@@ -44,7 +43,6 @@ impl ExecutionWrangler {
         gas_limit: u64,
         gas_fee_cap: TokenAmount,
         gas_premium: TokenAmount,
-        circulating_supply: TokenAmount,
         compute_msg_length: bool,
     ) -> Self {
         Self {
@@ -55,7 +53,6 @@ impl ExecutionWrangler {
             gas_limit,
             gas_fee_cap,
             gas_premium,
-            circulating_supply: RefCell::new(circulating_supply),
             sequences: RefCell::new(HashMap::new()),
             msg_length: 0,
             compute_msg_length,
@@ -69,8 +66,6 @@ impl ExecutionWrangler {
         store: Box<dyn Blockstore>,
         primitives: Box<dyn Primitives>,
     ) -> Self {
-        let reward_total = TokenAmount::from_whole(1_100_000_000i64);
-        let faucet_total = TokenAmount::from_whole(1_000_000_000i64);
         Self::new(
             bench,
             store,
@@ -79,7 +74,6 @@ impl ExecutionWrangler {
             BLOCK_GAS_LIMIT,
             TokenAmount::zero(),
             TokenAmount::zero(),
-            reward_total + faucet_total,
             true,
         )
     }
@@ -281,11 +275,11 @@ impl VM for ExecutionWrangler {
     }
 
     fn set_circulating_supply(&self, supply: TokenAmount) {
-        self.circulating_supply.replace(supply);
+        self.bench.borrow_mut().set_circulating_supply(supply);
     }
 
     fn circulating_supply(&self) -> TokenAmount {
-        self.circulating_supply.borrow().clone()
+        self.bench.borrow().circulating_supply().clone()
     }
 
     fn actor_manifest(&self) -> BTreeMap<Cid, vm_api::Type> {

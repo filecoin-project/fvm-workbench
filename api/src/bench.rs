@@ -81,4 +81,10 @@ pub trait Bench {
 
     /// Get a manifest of the builtin actors
     fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::Type>;
+
+    /// Get the current circulating supply
+    fn circulating_supply(&self) -> TokenAmount;
+
+    /// Set the current circulating supply
+    fn set_circulating_supply(&mut self, amount: TokenAmount);
 }

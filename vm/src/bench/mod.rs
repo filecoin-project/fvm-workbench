@@ -11,6 +11,7 @@ use fvm::trace::ExecutionEvent;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
+use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
 use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
@@ -189,6 +190,33 @@ where
         }
 
         map
+    }
+
+    fn circulating_supply(&self) -> TokenAmount {
+        self.executor.context().circ_supply.clone()
+    }
+
+    fn set_circulating_supply(&mut self, amount: TokenAmount) {
+        replace_with::replace_with_or_abort(&mut self.executor, |e| {
+            let mut machine = e.into_machine().unwrap();
+            let engine_conf = (&machine.context().network).into();
+            let mut machine_ctx = machine.context().clone();
+            machine_ctx.circ_supply = amount;
+            machine_ctx.initial_state_root = machine.flush().unwrap();
+
+            let machine = DefaultMachine::new(
+                &machine_ctx,
+                machine.into_store().into_inner(),
+                FakeExterns::new(),
+            )
+            .unwrap();
+
+            DefaultExecutor::<BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>::new(
+                EnginePool::new_default(engine_conf).unwrap(),
+                machine,
+            )
+            .unwrap()
+        });
     }
 }
 
