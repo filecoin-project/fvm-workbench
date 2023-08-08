@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use anyhow::anyhow;
 
 use cid::Cid;
@@ -9,11 +11,13 @@ use fvm::trace::ExecutionEvent;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::address::Address;
 use fvm_shared::clock::ChainEpoch;
+use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
 use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
 use fvm_workbench_api::trace::ExecutionTrace;
-use fvm_workbench_api::{ActorState, Bench, ExecutionResult};
+use fvm_workbench_api::{bench::Bench, ExecutionResult};
+use vm_api::ActorState;
 
 use crate::externs::FakeExterns;
 
@@ -74,8 +78,11 @@ where
         Ok(raw.map(|a| ActorState {
             code: a.code,
             state: a.state,
-            sequence: a.sequence,
+            call_seq: a.sequence,
             balance: a.balance,
+            // TODO: possibly rename predictable address if these are the same concept
+            // in ref-fvm predictable address is assigned to delegated address in some instances
+            predictable_address: a.delegated_address,
         }))
     }
 
@@ -121,6 +128,95 @@ where
 
     fn flush(&mut self) -> Cid {
         self.executor.flush().unwrap()
+    }
+
+    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::Type> {
+        let manifest = self.executor.builtin_actors();
+        let mut map = BTreeMap::new();
+
+        let init = manifest.code_by_id(2);
+        if let Some(code) = init {
+            map.insert(*code, vm_api::Type::Init);
+        }
+
+        let cron = manifest.code_by_id(3);
+        if let Some(code) = cron {
+            map.insert(*code, vm_api::Type::Cron);
+        }
+
+        let account = manifest.code_by_id(4);
+        if let Some(code) = account {
+            map.insert(*code, vm_api::Type::Account);
+        }
+
+        let power = manifest.code_by_id(5);
+        if let Some(code) = power {
+            map.insert(*code, vm_api::Type::Power);
+        }
+
+        let miner = manifest.code_by_id(6);
+        if let Some(code) = miner {
+            map.insert(*code, vm_api::Type::Miner);
+        }
+
+        let market = manifest.code_by_id(7);
+        if let Some(code) = market {
+            map.insert(*code, vm_api::Type::Market);
+        }
+
+        let payment_channel = manifest.code_by_id(8);
+        if let Some(code) = payment_channel {
+            map.insert(*code, vm_api::Type::PaymentChannel);
+        }
+
+        let multisig = manifest.code_by_id(9);
+        if let Some(code) = multisig {
+            map.insert(*code, vm_api::Type::Multisig);
+        }
+
+        let reward = manifest.code_by_id(10);
+        if let Some(code) = reward {
+            map.insert(*code, vm_api::Type::Reward);
+        }
+
+        let verifreg = manifest.code_by_id(11);
+        if let Some(code) = verifreg {
+            map.insert(*code, vm_api::Type::Reward);
+        }
+
+        let datacap = manifest.code_by_id(12);
+        if let Some(code) = datacap {
+            map.insert(*code, vm_api::Type::DataCap);
+        }
+
+        map
+    }
+
+    fn circulating_supply(&self) -> TokenAmount {
+        self.executor.context().circ_supply.clone()
+    }
+
+    fn set_circulating_supply(&mut self, amount: TokenAmount) {
+        replace_with::replace_with_or_abort(&mut self.executor, |e| {
+            let mut machine = e.into_machine().unwrap();
+            let engine_conf = (&machine.context().network).into();
+            let mut machine_ctx = machine.context().clone();
+            machine_ctx.circ_supply = amount;
+            machine_ctx.initial_state_root = machine.flush().unwrap();
+
+            let machine = DefaultMachine::new(
+                &machine_ctx,
+                machine.into_store().into_inner(),
+                FakeExterns::new(),
+            )
+            .unwrap();
+
+            DefaultExecutor::<BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>::new(
+                EnginePool::new_default(engine_conf).unwrap(),
+                machine,
+            )
+            .unwrap()
+        });
     }
 }
 

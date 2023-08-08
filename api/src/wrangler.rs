@@ -1,10 +1,10 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use anyhow::anyhow;
-use fvm_ipld_encoding::de;
-
+use cid::Cid;
 use fvm_ipld_blockstore::Blockstore;
+use fvm_ipld_encoding::de;
 use fvm_ipld_encoding::ipld_block::IpldBlock;
 use fvm_ipld_encoding::{from_slice, RawBytes};
 use fvm_shared::address::Address;
@@ -13,14 +13,10 @@ use fvm_shared::clock::ChainEpoch;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
+use vm_api::trace::InvocationTrace;
+use vm_api::{vm_err, ActorState, MessageResult, Primitives, VMError, VM};
 
-use crate::trace::InvocationTrace;
-use crate::ActorState;
-pub use crate::{Bench, ExecutionResult};
-
-// TODO: import these from an external location
-// https://github.com/anorth/fvm-workbench/issues/20
-pub use crate::vm::{FakePrimitives, MessageResult, Primitives, VMError, VM};
+pub use crate::{bench::Bench, ExecutionResult};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
@@ -38,9 +34,11 @@ pub struct ExecutionWrangler {
 impl ExecutionWrangler {
     /// Creates a new wrangler wrapping a given Bench. The store passed here must be a handle that
     /// operates on the same underlying storage as the bench
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         bench: Box<dyn Bench>,
         store: Box<dyn Blockstore>,
+        primitives: Box<dyn Primitives>,
         version: u64,
         gas_limit: u64,
         gas_fee_cap: TokenAmount,
@@ -50,6 +48,7 @@ impl ExecutionWrangler {
         Self {
             bench: RefCell::new(bench),
             store,
+            primitives,
             version,
             gas_limit,
             gas_fee_cap,
@@ -57,14 +56,26 @@ impl ExecutionWrangler {
             sequences: RefCell::new(HashMap::new()),
             msg_length: 0,
             compute_msg_length,
-            primitives: Box::new(FakePrimitives {}),
         }
     }
 
     /// Creates a new wrangler wrapping a given Bench. The store passed here must be a handle that
     /// operates on the same underlying storage as the bench
-    pub fn new_default(bench: Box<dyn Bench>, store: Box<dyn Blockstore>) -> Self {
-        Self::new(bench, store, 0, BLOCK_GAS_LIMIT, TokenAmount::zero(), TokenAmount::zero(), true)
+    pub fn new_default(
+        bench: Box<dyn Bench>,
+        store: Box<dyn Blockstore>,
+        primitives: Box<dyn Primitives>,
+    ) -> Self {
+        Self::new(
+            bench,
+            store,
+            primitives,
+            0,
+            BLOCK_GAS_LIMIT,
+            TokenAmount::zero(),
+            TokenAmount::zero(),
+            true,
+        )
     }
 
     pub fn execute(
@@ -226,7 +237,7 @@ impl VM for ExecutionWrangler {
         let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
         match self.execute(*from, *to, method, raw_params, value.clone()) {
             Ok(res) => Ok(res.into()),
-            Err(e) => Err(VMError { msg: e.to_string() }),
+            Err(e) => Err(vm_err(&e.to_string())),
         }
     }
 
@@ -241,7 +252,7 @@ impl VM for ExecutionWrangler {
         let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
         match self.execute_implicit(*from, *to, method, raw_params, value.clone()) {
             Ok(res) => Ok(res.into()),
-            Err(e) => Err(VMError { msg: e.to_string() }),
+            Err(e) => Err(vm_err(&e.to_string())),
         }
     }
 
@@ -261,5 +272,21 @@ impl VM for ExecutionWrangler {
 
     fn primitives(&self) -> &dyn Primitives {
         self.primitives.as_ref()
+    }
+
+    fn set_circulating_supply(&self, supply: TokenAmount) {
+        self.bench.borrow_mut().set_circulating_supply(supply);
+    }
+
+    fn circulating_supply(&self) -> TokenAmount {
+        self.bench.borrow().circulating_supply().clone()
+    }
+
+    fn actor_manifest(&self) -> BTreeMap<Cid, vm_api::Type> {
+        self.bench.borrow().builtin_actors_manifest()
+    }
+
+    fn state_root(&self) -> cid::Cid {
+        self.bench.borrow_mut().flush()
     }
 }

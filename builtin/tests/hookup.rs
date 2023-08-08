@@ -7,11 +7,15 @@ use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::METHOD_SEND;
 // use fvm_workbench_api::analysis::TraceAnalysis;
-use fvm_workbench_api::wrangler::{ExecutionWrangler, VM};
-use fvm_workbench_api::WorkbenchBuilder;
-use fvm_workbench_builtin_actors::genesis::{create_genesis_actors, GenesisSpec};
+use fvm_workbench_api::bench::WorkbenchBuilder;
+use fvm_workbench_api::wrangler::ExecutionWrangler;
+use fvm_workbench_builtin_actors::genesis::{
+    create_genesis_actors, GenesisSpec, BUILTIN_ACTORS_BUNDLE,
+};
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
+use fvm_workbench_vm::primitives::FakePrimitives;
+use vm_api::VM;
 
 #[test]
 fn test_hookup() {
@@ -21,14 +25,15 @@ fn test_hookup() {
         FakeExterns::new(),
         NetworkVersion::V18,
         StateTreeVersion::V5,
-        actors_v12::BUNDLE_CAR,
+        BUILTIN_ACTORS_BUNDLE,
     )
     .unwrap();
 
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     let bench = builder.build().unwrap();
-    let wrangler = ExecutionWrangler::new_default(bench, Box::new(store));
+    let wrangler =
+        ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}));
 
     let result = wrangler
         .execute_message(

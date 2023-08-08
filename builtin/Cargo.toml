@@ -11,21 +11,21 @@ fvm-workbench-vm = { path = "../vm" }
 fvm-workbench-api = { path = "../api" }
 
 # depend on a mainline actors v12 commit with v3.2 depednencies
-actors-v12 = { package = "fil_builtin_actors_bundle", version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master" }
-fil_actor_account = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_cron = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_datacap = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_init = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_market = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_miner = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_multisig = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_paych = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_power = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_reward = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_system = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actor_verifreg = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-fil_actors_runtime = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", branch = "master", features = [] }
-
+fil_builtin_actors_bundle = { version = "12.0.0", workspace = "true"  }
+fil_actor_account = { workspace = true }
+fil_actor_cron = { workspace = true }
+fil_actor_datacap = { workspace = true }
+fil_actor_init = { workspace = true }
+fil_actor_market = { workspace = true }
+fil_actor_miner = { workspace = true }
+fil_actor_multisig = { workspace = true }
+fil_actor_paych = { workspace = true }
+fil_actor_power = { workspace = true }
+fil_actor_reward = { workspace = true }
+fil_actor_system = { workspace = true }
+fil_actor_verifreg = { workspace = true }
+fil_actors_runtime = { workspace = true }
+fil_actors_integration_tests = { workspace = true }
 
 fvm = { workspace = true }
 fvm_actor_utils = { workspace = true } 
@@ -34,19 +34,18 @@ fvm_ipld_blockstore = { workspace = true }
 fvm_ipld_encoding = { workspace = true }
 fvm_ipld_hamt = { workspace = true } 
 fvm_shared = { workspace = true }
+vm_api = { workspace = true }
 
 # Used directly in some tests
 frc46_token = { workspace = true }
 
-anyhow = "~1.0.47"
-blake2b_simd = "1.0.0"
-bls-signatures = { version = "0.13", default-features = false }
+anyhow = { workspace = true }
+blake2b_simd = { workspace = true }
+bls-signatures = { workspace = true }
 cid = { workspace = true }
-libsecp256k1 = { version = "0.7" }
-multihash = { version = "~0.16.1", default-features = false }
-rand_chacha = "~0.3"
-thiserror = "~1.0.30"
-num-traits = "0.2.14"
+libsecp256k1 = { workspace = true }
+rand_chacha = { workspace = true }
+num-traits = { workspace = true }
 
 [dev-dependencies]
 log = "0.4"
