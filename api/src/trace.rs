@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::borrow::Cow;
 use std::fmt::Debug;
 
@@ -6,7 +7,7 @@ use fvm_shared::address::Address;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::error::{ErrorNumber, ExitCode};
 use fvm_shared::{ActorID, MethodNum};
-use itertools::Itertools;
+use vm_api::trace::InvocationTrace;
 
 /// A trace of a single message execution comprising a series of events.
 /// An execution trace is easily produced by any abstract VM and can be used for low-level analysis
@@ -62,4 +63,73 @@ pub enum ExecutionEvent {
     Log {
         msg: String,
     },
+}
+
+impl From<ExecutionTrace> for InvocationTrace {
+    fn from(e_trace: ExecutionTrace) -> InvocationTrace {
+        let mut invocation_stack: Vec<InvocationTrace> = Vec::new();
+
+        for event in e_trace.clone().events.into_iter() {
+            match event {
+                ExecutionEvent::GasCharge { .. } | ExecutionEvent::Log { .. } => {}
+                ExecutionEvent::Call { from, to, method, params, value } => {
+                    invocation_stack.push(InvocationTrace {
+                        from: Address::new_id(from),
+                        to,
+                        method,
+                        params,
+                        value,
+                        code: ExitCode::OK, // Placeholder, will be updated during return
+                        ret: None,          // Placeholder, will be updated during return
+                        subinvocations: Vec::new(),
+                    });
+                }
+                ExecutionEvent::CallReturn { return_value, exit_code } => {
+                    let mut current_invocation = invocation_stack
+                        .pop()
+                        .unwrap_or_else(|| panic!("Unmatched call return: {:?}", e_trace));
+
+                    current_invocation.code = exit_code;
+                    current_invocation.ret = return_value;
+
+                    if let Some(parent_invocation) = invocation_stack.last_mut() {
+                        parent_invocation.subinvocations.push(current_invocation);
+                    } else {
+                        // At root invocation
+                        return current_invocation;
+                    }
+                }
+                ExecutionEvent::CallAbort { exit_code } => {
+                    let mut current_invocation = invocation_stack
+                        .pop()
+                        .unwrap_or_else(|| panic!("Unmatched call abort: {:?}", e_trace));
+
+                    current_invocation.code = exit_code;
+
+                    if let Some(parent_invocation) = invocation_stack.last_mut() {
+                        parent_invocation.subinvocations.push(current_invocation);
+                    } else {
+                        // At root invocation
+                        return current_invocation;
+                    }
+                }
+                ExecutionEvent::CallError { .. } => {
+                    let mut current_invocation = invocation_stack
+                        .pop()
+                        .unwrap_or_else(|| panic!("Unmatched call error: {:?}", e_trace));
+
+                    current_invocation.code = ExitCode::SYS_ASSERTION_FAILED;
+
+                    if let Some(parent_invocation) = invocation_stack.last_mut() {
+                        parent_invocation.subinvocations.push(current_invocation);
+                    } else {
+                        // At root invocation
+                        return current_invocation;
+                    }
+                }
+            }
+        }
+
+        panic!("Malformed ExecutionTrace: {:?}", e_trace)
+    }
 }

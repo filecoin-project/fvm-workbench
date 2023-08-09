@@ -16,11 +16,12 @@ use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use vm_api::trace::InvocationTrace;
 use vm_api::{vm_err, ActorState, MessageResult, Primitives, VMError, VM};
 
-pub use crate::{bench::Bench, ExecutionResult};
+pub use crate::{bench::Bench, trace::ExecutionTrace, ExecutionResult};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
     store: Box<dyn Blockstore>,
+    primitives: Box<dyn Primitives>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
@@ -28,7 +29,7 @@ pub struct ExecutionWrangler {
     sequences: RefCell<HashMap<Address, u64>>,
     msg_length: usize,
     compute_msg_length: bool,
-    primitives: Box<dyn Primitives>,
+    execution_results: RefCell<Vec<ExecutionTrace>>,
 }
 
 impl ExecutionWrangler {
@@ -56,6 +57,7 @@ impl ExecutionWrangler {
             sequences: RefCell::new(HashMap::new()),
             msg_length: 0,
             compute_msg_length,
+            execution_results: RefCell::new(Vec::new()),
         }
     }
 
@@ -76,40 +78,6 @@ impl ExecutionWrangler {
             TokenAmount::zero(),
             true,
         )
-    }
-
-    pub fn execute(
-        &self,
-        from: Address,
-        to: Address,
-        method: MethodNum,
-        params: RawBytes,
-        value: TokenAmount,
-    ) -> anyhow::Result<ExecutionResult> {
-        let sequence = *self.sequences.borrow().get(&from).unwrap_or(&0);
-        let (msg, msg_length) = self.make_msg(from, to, method, params, value, sequence);
-        let ret = self.bench.borrow_mut().execute(msg, msg_length);
-        if ret.is_ok() {
-            self.sequences.borrow_mut().insert(from, sequence + 1);
-        }
-        ret
-    }
-
-    pub fn execute_implicit(
-        &self,
-        from: Address,
-        to: Address,
-        method: MethodNum,
-        params: RawBytes,
-        value: TokenAmount,
-    ) -> anyhow::Result<ExecutionResult> {
-        let sequence = *self.sequences.borrow().get(&from).unwrap_or(&0);
-        let (msg, msg_length) = self.make_msg(from, to, method, params, value, sequence);
-        let ret = self.bench.borrow_mut().execute_implicit(msg, msg_length);
-        if ret.is_ok() {
-            self.sequences.borrow_mut().insert(from, sequence + 1);
-        }
-        ret
     }
 
     pub fn epoch(&self) -> ChainEpoch {
@@ -153,6 +121,13 @@ impl ExecutionWrangler {
         self.bench.borrow().resolve_address(addr)
     }
 
+    pub fn peek_execution_trace(&self) -> Vec<ExecutionTrace> {
+        self.execution_results.borrow().clone()
+    }
+}
+
+// Private helpers
+impl ExecutionWrangler {
     fn make_msg(
         &self,
         from: Address,
@@ -180,6 +155,35 @@ impl ExecutionWrangler {
             0 // FIXME serialize and size
         };
         (msg, msg_length)
+    }
+
+    fn execute(
+        &self,
+        params: Option<IpldBlock>,
+        from: &Address,
+        to: &Address,
+        method: u64,
+        value: &TokenAmount,
+        implicit: bool,
+    ) -> Result<MessageResult, VMError> {
+        let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
+        let sequence = *self.sequences.borrow().get(from).unwrap_or(&0);
+        let (msg, msg_length) =
+            self.make_msg(*from, *to, method, raw_params, value.clone(), sequence);
+        let ret = match implicit {
+            true => self.bench.borrow_mut().execute_implicit(msg, msg_length),
+            false => self.bench.borrow_mut().execute(msg, msg_length),
+        };
+        if ret.is_ok() {
+            self.sequences.borrow_mut().insert(*from, sequence + 1);
+        }
+        match ret {
+            Ok(res) => {
+                self.execution_results.borrow_mut().push(res.trace.clone());
+                Ok(res.into())
+            }
+            Err(e) => Err(vm_err(&e.to_string())),
+        }
     }
 }
 
@@ -220,11 +224,7 @@ impl VM for ExecutionWrangler {
         method: MethodNum,
         params: Option<IpldBlock>,
     ) -> Result<MessageResult, VMError> {
-        let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
-        match self.execute(*from, *to, method, raw_params, value.clone()) {
-            Ok(res) => Ok(res.into()),
-            Err(e) => Err(vm_err(&e.to_string())),
-        }
+        self.execute(params, from, to, method, value, false)
     }
 
     fn execute_message_implicit(
@@ -235,11 +235,7 @@ impl VM for ExecutionWrangler {
         method: MethodNum,
         params: Option<IpldBlock>,
     ) -> Result<MessageResult, VMError> {
-        let raw_params = params.map_or(RawBytes::default(), |block| RawBytes::from(block.data));
-        match self.execute_implicit(*from, *to, method, raw_params, value.clone()) {
-            Ok(res) => Ok(res.into()),
-            Err(e) => Err(vm_err(&e.to_string())),
-        }
+        self.execute(params, from, to, method, value, true)
     }
 
     fn set_epoch(&self, epoch: ChainEpoch) {
@@ -247,8 +243,7 @@ impl VM for ExecutionWrangler {
     }
 
     fn take_invocations(&self) -> Vec<InvocationTrace> {
-        // TODO: after https://github.com/anorth/fvm-workbench/issues/19
-        todo!()
+        self.execution_results.take().into_iter().map(InvocationTrace::from).collect()
     }
 
     fn actor(&self, address: &Address) -> Option<ActorState> {
