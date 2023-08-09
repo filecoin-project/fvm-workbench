@@ -153,20 +153,6 @@ impl ExecutionWrangler {
         self.bench.borrow().resolve_address(addr)
     }
 
-    /// Returns a reference to the underlying blockstore
-    /// The blockstore handle here is intended to be short-lived as some executors may buffer changes leading to this
-    /// handle drifting out of sync
-    // TODO: https://github.com/anorth/fvm-workbench/issues/15
-    pub fn store(&self) -> &dyn Blockstore {
-        // It's unfortunate that we need to call flush here everytime we need the wrangler to give out a blockstore reference
-        // However, the state_tree inside Executor wraps whatever blockstore it's given with a BufferedBlockstore
-        // Since the store held by the Wrangler was cloned prior to being wrapped in the BufferedBlockstore, it's possible
-        // there are pending changes to the underlying blockstore held in the BufferedBlockstore's cache that are not
-        // visible via our handle.
-        self.bench.borrow_mut().flush();
-        self.store.as_ref()
-    }
-
     fn make_msg(
         &self,
         from: Address,
