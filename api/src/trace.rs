@@ -67,18 +67,24 @@ pub enum ExecutionEvent {
 
 impl From<ExecutionTrace> for InvocationTrace {
     fn from(e_trace: ExecutionTrace) -> InvocationTrace {
+        InvocationTrace::from(&e_trace)
+    }
+}
+
+impl From<&ExecutionTrace> for InvocationTrace {
+    fn from(e_trace: &ExecutionTrace) -> InvocationTrace {
         let mut invocation_stack: Vec<InvocationTrace> = Vec::new();
 
-        for event in e_trace.clone().events.into_iter() {
+        for event in e_trace.events.iter() {
             match event {
                 ExecutionEvent::GasCharge { .. } | ExecutionEvent::Log { .. } => {}
                 ExecutionEvent::Call { from, to, method, params, value } => {
                     invocation_stack.push(InvocationTrace {
-                        from: Address::new_id(from),
-                        to,
-                        method,
-                        params,
-                        value,
+                        from: Address::new_id(*from),
+                        to: *to,
+                        method: *method,
+                        params: params.clone(),
+                        value: value.clone(),
                         code: ExitCode::OK, // Placeholder, will be updated during return
                         ret: None,          // Placeholder, will be updated during return
                         subinvocations: Vec::new(),
@@ -89,8 +95,8 @@ impl From<ExecutionTrace> for InvocationTrace {
                         .pop()
                         .unwrap_or_else(|| panic!("Unmatched call return: {:?}", e_trace));
 
-                    current_invocation.code = exit_code;
-                    current_invocation.ret = return_value;
+                    current_invocation.code = *exit_code;
+                    current_invocation.ret = return_value.clone();
 
                     if let Some(parent_invocation) = invocation_stack.last_mut() {
                         parent_invocation.subinvocations.push(current_invocation);
@@ -104,7 +110,7 @@ impl From<ExecutionTrace> for InvocationTrace {
                         .pop()
                         .unwrap_or_else(|| panic!("Unmatched call abort: {:?}", e_trace));
 
-                    current_invocation.code = exit_code;
+                    current_invocation.code = *exit_code;
 
                     if let Some(parent_invocation) = invocation_stack.last_mut() {
                         parent_invocation.subinvocations.push(current_invocation);
