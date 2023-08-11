@@ -121,8 +121,11 @@ impl ExecutionWrangler {
         self.bench.borrow().resolve_address(addr)
     }
 
-    pub fn peek_execution_trace(&self) -> Vec<ExecutionTrace> {
-        self.execution_results.borrow().clone()
+    /// Returns a copy of the last execution trace if any exist
+    /// For test assertions you probably want VM::take_invocations instead
+    /// NOTE: These traces will be cleared if take_invocations was called earlier
+    pub fn peek_execution_trace(&self) -> Option<ExecutionTrace> {
+        self.execution_results.borrow().last().cloned()
     }
 }
 
@@ -242,6 +245,7 @@ impl VM for ExecutionWrangler {
         self.bench.borrow_mut().set_epoch(epoch)
     }
 
+    /// Note: this is derived from the underlying ExecutionTraces, so it will clear those when taken
     fn take_invocations(&self) -> Vec<InvocationTrace> {
         self.execution_results.take().into_iter().map(InvocationTrace::from).collect()
     }

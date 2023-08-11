@@ -53,9 +53,6 @@ pub enum ExecutionEvent {
         return_value: Option<IpldBlock>,
         exit_code: ExitCode,
     },
-    CallAbort {
-        exit_code: ExitCode,
-    },
     CallError {
         reason: String,
         errno: ErrorNumber,
@@ -74,6 +71,7 @@ impl From<ExecutionTrace> for InvocationTrace {
 impl From<&ExecutionTrace> for InvocationTrace {
     fn from(e_trace: &ExecutionTrace) -> InvocationTrace {
         let mut invocation_stack: Vec<InvocationTrace> = Vec::new();
+        let mut root_invocation: Option<InvocationTrace> = None;
 
         for event in e_trace.events.iter() {
             match event {
@@ -85,15 +83,15 @@ impl From<&ExecutionTrace> for InvocationTrace {
                         method: *method,
                         params: params.clone(),
                         value: value.clone(),
-                        code: ExitCode::OK, // Placeholder, will be updated during return
+                        code: ExitCode::OK, // Placeholder, will be updated during call return
                         ret: None,          // Placeholder, will be updated during return
-                        subinvocations: Vec::new(),
+                        subinvocations: Vec::new(), // Placeholder, will be updated if subinvocations are made
                     });
                 }
                 ExecutionEvent::CallReturn { return_value, exit_code } => {
                     let mut current_invocation = invocation_stack
                         .pop()
-                        .unwrap_or_else(|| panic!("Unmatched call return: {:?}", e_trace));
+                        .unwrap_or_else(|| panic!("Unmatched CallReturn: {:?}", e_trace));
 
                     current_invocation.code = *exit_code;
                     current_invocation.ret = return_value.clone();
@@ -101,41 +99,39 @@ impl From<&ExecutionTrace> for InvocationTrace {
                     if let Some(parent_invocation) = invocation_stack.last_mut() {
                         parent_invocation.subinvocations.push(current_invocation);
                     } else {
-                        // At root invocation
-                        return current_invocation;
-                    }
-                }
-                ExecutionEvent::CallAbort { exit_code } => {
-                    let mut current_invocation = invocation_stack
-                        .pop()
-                        .unwrap_or_else(|| panic!("Unmatched call abort: {:?}", e_trace));
-
-                    current_invocation.code = *exit_code;
-
-                    if let Some(parent_invocation) = invocation_stack.last_mut() {
-                        parent_invocation.subinvocations.push(current_invocation);
-                    } else {
-                        // At root invocation
-                        return current_invocation;
+                        // At root invocation, assign to the root call
+                        if root_invocation.is_some() {
+                            panic!("Attempting to assign multiple root invocations: {:?}", e_trace);
+                        }
+                        root_invocation = Some(current_invocation);
                     }
                 }
                 ExecutionEvent::CallError { .. } => {
                     let mut current_invocation = invocation_stack
                         .pop()
-                        .unwrap_or_else(|| panic!("Unmatched call error: {:?}", e_trace));
+                        .unwrap_or_else(|| panic!("Unmatched CallError: {:?}", e_trace));
 
+                    // TODO(alexytsu): have invocation trace store ErrorNumber | ExitCode
+                    // blocked by: https://github.com/filecoin-project/builtin-actors/issues/1365
                     current_invocation.code = ExitCode::SYS_ASSERTION_FAILED;
 
                     if let Some(parent_invocation) = invocation_stack.last_mut() {
                         parent_invocation.subinvocations.push(current_invocation);
                     } else {
-                        // At root invocation
-                        return current_invocation;
+                        // At root invocation, assign to the root call
+                        if root_invocation.is_some() {
+                            panic!("Attempting to assign multiple root invocations: {:?}", e_trace);
+                        }
+                        root_invocation = Some(current_invocation);
                     }
                 }
             }
         }
 
-        panic!("Malformed ExecutionTrace: {:?}", e_trace)
+        if !invocation_stack.is_empty() {
+            panic!("Malformed ExecutionTrace, leftover invocations in stack: {:?}", e_trace);
+        }
+
+        root_invocation.expect("Malformed ExecutionTrace, missing root invocation")
     }
 }
