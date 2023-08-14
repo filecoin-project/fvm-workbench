@@ -1,10 +1,12 @@
 name: Benchmark builtin actors
 
 on:
+  # Benchmarks can be run manually from the `Run workflow` dropdown https://github.com/anorth/fvm-workbench/actions/workflows/benchmark-builtins.yml
+  # Or, they are run automatically on benchmark-* branches (which can be used to target different builtin-actor bundles)
   workflow_dispatch:
   push:
     branches:
-      - main
+      - benchmark-*
 
 jobs:
   benchmark-builtins:

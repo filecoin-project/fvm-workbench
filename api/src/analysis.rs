@@ -50,9 +50,7 @@ impl TraceAnalysis {
                     spans.push(Span::new(span_id));
                     call_stack.push(spans.len() - 1);
                 }
-                ExecutionEvent::CallReturn { .. }
-                | ExecutionEvent::CallAbort { .. }
-                | ExecutionEvent::CallError { .. } => {
+                ExecutionEvent::CallReturn { .. } | ExecutionEvent::CallError { .. } => {
                     // Pop from call stack
                     let closed_idx = call_stack.pop().unwrap();
                     let closed_span = spans.get_mut(closed_idx).unwrap();

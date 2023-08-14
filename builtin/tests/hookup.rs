@@ -6,7 +6,7 @@ use fvm_shared::error::ExitCode;
 use fvm_shared::state::StateTreeVersion;
 use fvm_shared::version::NetworkVersion;
 use fvm_shared::METHOD_SEND;
-// use fvm_workbench_api::analysis::TraceAnalysis;
+use fvm_workbench_api::analysis::TraceAnalysis;
 use fvm_workbench_api::bench::WorkbenchBuilder;
 use fvm_workbench_api::wrangler::ExecutionWrangler;
 use fvm_workbench_builtin_actors::genesis::{
@@ -47,8 +47,8 @@ fn test_hookup() {
 
     assert_eq!(ExitCode::OK, result.code);
 
-    // TODO: re-enable traces after https://github.com/anorth/fvm-workbench/issues/19 is completed
-    // println!("{}", result.trace.format());
-    // let analysis = TraceAnalysis::build(result.trace);
-    // println!("{}", analysis.format_spans());
+    let trace = wrangler.peek_execution_trace().unwrap();
+    println!("{}", trace.format());
+    let analysis = TraceAnalysis::build(trace.clone());
+    println!("{}", analysis.format_spans());
 }
