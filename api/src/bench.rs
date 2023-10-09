@@ -70,6 +70,9 @@ pub trait Bench {
     /// Returns None if no such actor is found.
     fn find_actor(&self, id: ActorID) -> anyhow::Result<Option<ActorState>>;
 
+    /// Replaces the state of the actor at the specified address
+    fn set_actor(&mut self, key: &Address, state: ActorState);
+
     /// Resolves an address to an actor ID.
     /// Returns None if the address cannot be resolved.
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>>;
@@ -80,7 +83,7 @@ pub trait Bench {
     fn flush(&mut self) -> Cid;
 
     /// Get a manifest of the builtin actors
-    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::Type>;
+    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::builtin::Type>;
 
     /// Get the current circulating supply
     fn circulating_supply(&self) -> TokenAmount;

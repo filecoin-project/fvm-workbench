@@ -78,14 +78,15 @@ impl From<&ExecutionTrace> for InvocationTrace {
                 ExecutionEvent::GasCharge { .. } | ExecutionEvent::Log { .. } => {}
                 ExecutionEvent::Call { from, to, method, params, value } => {
                     invocation_stack.push(InvocationTrace {
-                        from: Address::new_id(*from),
+                        from: *from,
                         to: *to,
                         method: *method,
                         params: params.clone(),
                         value: value.clone(),
-                        code: ExitCode::OK, // Placeholder, will be updated during call return
-                        ret: None,          // Placeholder, will be updated during return
+                        exit_code: ExitCode::OK, // Placeholder, will be updated during call return
+                        return_value: None,      // Placeholder, will be updated during return
                         subinvocations: Vec::new(), // Placeholder, will be updated if subinvocations are made
+                        error_number: None, // Placeholder, will be updated if an error occurs
                     });
                 }
                 ExecutionEvent::CallReturn { return_value, exit_code } => {
@@ -93,8 +94,8 @@ impl From<&ExecutionTrace> for InvocationTrace {
                         .pop()
                         .unwrap_or_else(|| panic!("Unmatched CallReturn: {:?}", e_trace));
 
-                    current_invocation.code = *exit_code;
-                    current_invocation.ret = return_value.clone();
+                    current_invocation.exit_code = *exit_code;
+                    current_invocation.return_value = return_value.clone();
 
                     if let Some(parent_invocation) = invocation_stack.last_mut() {
                         parent_invocation.subinvocations.push(current_invocation);
@@ -113,7 +114,7 @@ impl From<&ExecutionTrace> for InvocationTrace {
 
                     // TODO(alexytsu): have invocation trace store ErrorNumber | ExitCode
                     // blocked by: https://github.com/filecoin-project/builtin-actors/issues/1365
-                    current_invocation.code = ExitCode::SYS_ASSERTION_FAILED;
+                    current_invocation.exit_code = ExitCode::SYS_ASSERTION_FAILED;
 
                     if let Some(parent_invocation) = invocation_stack.last_mut() {
                         parent_invocation.subinvocations.push(current_invocation);

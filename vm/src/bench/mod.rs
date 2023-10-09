@@ -75,15 +75,29 @@ where
             .state_tree()
             .get_actor(id)
             .map_err(|e| anyhow!("failed to load actor {}: {}", id, e.to_string()))?;
+        // convert from an internal FVM ActorState type to the API ActorState type
         Ok(raw.map(|a| ActorState {
             code: a.code,
             state: a.state,
-            call_seq: a.sequence,
+            sequence: a.sequence,
             balance: a.balance,
-            // TODO: possibly rename predictable address if these are the same concept
-            // in ref-fvm predictable address is assigned to delegated address in some instances
-            predictable_address: a.delegated_address,
+            delegated_address: a.delegated_address,
         }))
+    }
+
+    fn set_actor(&mut self, key: &Address, state: ActorState) {
+        let id = self.resolve_address(key).unwrap().unwrap();
+        self.executor.state_tree_mut().set_actor(
+            id,
+            // convert from API Actor State to internal FVM ActorState type
+            fvm::state_tree::ActorState {
+                balance: state.balance,
+                code: state.code,
+                delegated_address: state.delegated_address,
+                sequence: state.sequence,
+                state: state.state,
+            },
+        );
     }
 
     fn resolve_address(&self, addr: &Address) -> anyhow::Result<Option<ActorID>> {
@@ -130,63 +144,63 @@ where
         self.executor.flush().unwrap()
     }
 
-    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::Type> {
+    fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::builtin::Type> {
         let manifest = self.executor.builtin_actors();
         let mut map = BTreeMap::new();
 
         let init = manifest.code_by_id(2);
         if let Some(code) = init {
-            map.insert(*code, vm_api::Type::Init);
+            map.insert(*code, vm_api::builtin::Type::Init);
         }
 
         let cron = manifest.code_by_id(3);
         if let Some(code) = cron {
-            map.insert(*code, vm_api::Type::Cron);
+            map.insert(*code, vm_api::builtin::Type::Cron);
         }
 
         let account = manifest.code_by_id(4);
         if let Some(code) = account {
-            map.insert(*code, vm_api::Type::Account);
+            map.insert(*code, vm_api::builtin::Type::Account);
         }
 
         let power = manifest.code_by_id(5);
         if let Some(code) = power {
-            map.insert(*code, vm_api::Type::Power);
+            map.insert(*code, vm_api::builtin::Type::Power);
         }
 
         let miner = manifest.code_by_id(6);
         if let Some(code) = miner {
-            map.insert(*code, vm_api::Type::Miner);
+            map.insert(*code, vm_api::builtin::Type::Miner);
         }
 
         let market = manifest.code_by_id(7);
         if let Some(code) = market {
-            map.insert(*code, vm_api::Type::Market);
+            map.insert(*code, vm_api::builtin::Type::Market);
         }
 
         let payment_channel = manifest.code_by_id(8);
         if let Some(code) = payment_channel {
-            map.insert(*code, vm_api::Type::PaymentChannel);
+            map.insert(*code, vm_api::builtin::Type::PaymentChannel);
         }
 
         let multisig = manifest.code_by_id(9);
         if let Some(code) = multisig {
-            map.insert(*code, vm_api::Type::Multisig);
+            map.insert(*code, vm_api::builtin::Type::Multisig);
         }
 
         let reward = manifest.code_by_id(10);
         if let Some(code) = reward {
-            map.insert(*code, vm_api::Type::Reward);
+            map.insert(*code, vm_api::builtin::Type::Reward);
         }
 
         let verifreg = manifest.code_by_id(11);
         if let Some(code) = verifreg {
-            map.insert(*code, vm_api::Type::Reward);
+            map.insert(*code, vm_api::builtin::Type::Reward);
         }
 
         let datacap = manifest.code_by_id(12);
         if let Some(code) = datacap {
-            map.insert(*code, vm_api::Type::DataCap);
+            map.insert(*code, vm_api::builtin::Type::DataCap);
         }
 
         map
