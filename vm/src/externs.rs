@@ -10,11 +10,11 @@ use fvm_shared::IDENTITY_HASH;
 use multihash::Multihash;
 
 /// Provides chain or beacon randomness externally.
-pub type RandomnessSource = Rc<dyn Fn(i64, ChainEpoch, &[u8]) -> anyhow::Result<[u8; 32]>>;
+pub type RandomnessSource = Rc<dyn Fn(ChainEpoch) -> anyhow::Result<[u8; 32]>>;
 
 /// Returns a randomness source that returns a constant value.
 pub fn const_randomness(v: [u8; 32]) -> RandomnessSource {
-    Rc::new(move |_pers, _round, _entropy| Ok(v))
+    Rc::new(move |_round| Ok(v))
 }
 
 /// Provides consensus fault evaluation externally.
@@ -88,22 +88,12 @@ impl Externs for FakeExterns {}
 // impl <'a> Externs for &'a FakeExterns{}
 
 impl Rand for FakeExterns {
-    fn get_chain_randomness(
-        &self,
-        dst: i64,
-        epoch: ChainEpoch,
-        entropy: &[u8],
-    ) -> anyhow::Result<[u8; 32]> {
-        (self.chain_randomness)(dst, epoch, entropy)
+    fn get_chain_randomness(&self, round: ChainEpoch) -> anyhow::Result<[u8; 32]> {
+        (self.chain_randomness)(round)
     }
 
-    fn get_beacon_randomness(
-        &self,
-        dst: i64,
-        epoch: ChainEpoch,
-        entropy: &[u8],
-    ) -> anyhow::Result<[u8; 32]> {
-        (self.beacon_randomness)(dst, epoch, entropy)
+    fn get_beacon_randomness(&self, round: ChainEpoch) -> anyhow::Result<[u8; 32]> {
+        (self.beacon_randomness)(round)
     }
 }
 

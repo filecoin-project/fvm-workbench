@@ -23,7 +23,7 @@ use fvm_shared::sector::{
 };
 use fvm_shared::sys::out::network::NetworkContext;
 use fvm_shared::sys::out::vm::MessageContext;
-use fvm_shared::sys::SendFlags;
+use fvm_shared::sys::{EventEntry, SendFlags};
 use fvm_shared::{ActorID, MethodNum};
 
 use multihash::derive::Multihash;
@@ -249,8 +249,9 @@ where
         let charge = self.inner_kernel.price_list().on_verify_signature(sig_type, signature.len());
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         if signature != plaintext {
-            return Err(ExecutionError::Fatal(anyhow::format_err!(
-                "invalid signature (mock sig validation expects siggy bytes to be equal to plaintext)"
+            return Err(ExecutionError::Syscall(fvm::kernel::SyscallError(
+                "invalid signature (mock sig validation expects siggy bytes to be equal to plaintext)".into(),
+                fvm_shared::error::ErrorNumber::IllegalArgument,
             )));
         }
         Ok(true)
@@ -272,13 +273,6 @@ where
             let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         }
         Ok(vec![true; vis.len()])
-    }
-
-    // NOT forwarded - verification always succeeds
-    fn verify_seal(&self, vi: &SealVerifyInfo) -> ExecutionResult<bool> {
-        let charge = self.inner_kernel.price_list().on_verify_seal(vi);
-        let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
-        Ok(true)
     }
 
     // NOT forwarded - verification always succeeds
@@ -394,22 +388,19 @@ where
     // TODO: perhaps should be implemented via faking externs https://github.com/anorth/fvm-workbench/issues/10
     fn get_randomness_from_tickets(
         &self,
-        _personalization: i64,
-        _rand_epoch: ChainEpoch,
-        entropy: &[u8],
+        rand_epoch: ChainEpoch,
     ) -> ExecutionResult<[u8; RANDOMNESS_LENGTH]> {
-        let charge = self.inner_kernel.price_list().on_get_randomness(entropy.len());
-        let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
+        // use the inner kernel to charge the correct amount of gas
+        let _ = self.inner_kernel.get_randomness_from_tickets(rand_epoch)?;
+        // but return a hard-coded randmoness value
         Ok(TEST_VM_RAND_ARRAY)
     }
 
     fn get_randomness_from_beacon(
         &self,
-        personalization: i64,
         rand_epoch: ChainEpoch,
-        entropy: &[u8],
     ) -> ExecutionResult<[u8; RANDOMNESS_LENGTH]> {
-        self.inner_kernel.get_randomness_from_beacon(personalization, rand_epoch, entropy)
+        self.inner_kernel.get_randomness_from_beacon(rand_epoch)
     }
 }
 
@@ -418,7 +409,7 @@ impl<C> SelfOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn root(&self) -> ExecutionResult<Cid> {
+    fn root(&mut self) -> ExecutionResult<Cid> {
         self.inner_kernel.root()
     }
 
@@ -430,8 +421,8 @@ where
         self.inner_kernel.current_balance()
     }
 
-    fn self_destruct(&mut self, beneficiary: &Address) -> ExecutionResult<()> {
-        self.inner_kernel.self_destruct(beneficiary)
+    fn self_destruct(&mut self, burn_unspent: bool) -> ExecutionResult<()> {
+        self.inner_kernel.self_destruct(burn_unspent)
     }
 }
 
@@ -440,8 +431,13 @@ impl<C> EventOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn emit_event(&mut self, raw_evt: &[u8]) -> ExecutionResult<()> {
-        self.inner_kernel.emit_event(raw_evt)
+    fn emit_event(
+        &mut self,
+        event_headers: &[EventEntry],
+        raw_key: &[u8],
+        raw_val: &[u8],
+    ) -> ExecutionResult<()> {
+        self.inner_kernel.emit_event(event_headers, raw_key, raw_val)
     }
 }
 

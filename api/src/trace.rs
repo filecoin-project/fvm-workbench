@@ -1,3 +1,4 @@
+use cid::Cid;
 use itertools::Itertools;
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -48,6 +49,8 @@ pub enum ExecutionEvent {
         method: MethodNum,
         params: Option<IpldBlock>,
         value: TokenAmount,
+        gas_limit: u64,
+        read_only: bool,
     },
     CallReturn {
         return_value: Option<IpldBlock>,
@@ -59,6 +62,9 @@ pub enum ExecutionEvent {
     },
     Log {
         msg: String,
+    },
+    InvokeActor {
+        cid: Cid,
     },
 }
 
@@ -75,8 +81,10 @@ impl From<&ExecutionTrace> for InvocationTrace {
 
         for event in e_trace.events.iter() {
             match event {
-                ExecutionEvent::GasCharge { .. } | ExecutionEvent::Log { .. } => {}
-                ExecutionEvent::Call { from, to, method, params, value } => {
+                ExecutionEvent::GasCharge { .. }
+                | ExecutionEvent::Log { .. }
+                | ExecutionEvent::InvokeActor { .. } => {}
+                ExecutionEvent::Call { from, to, method, params, value, .. } => {
                     invocation_stack.push(InvocationTrace {
                         from: *from,
                         to: *to,
