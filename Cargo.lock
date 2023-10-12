@@ -2314,6 +2314,7 @@ dependencies = [
  "num-derive 0.3.3",
  "num-traits",
  "serde",
+ "vm_api",
 ]
 
 [[package]]
