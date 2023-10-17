@@ -82,6 +82,9 @@ pub trait Bench {
     /// referenced elsewhere)
     fn flush(&mut self) -> Cid;
 
+    /// Gets a generic state root (ActorMap)
+    fn state_root(&mut self) -> Cid;
+
     /// Get a manifest of the builtin actors
     fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::builtin::Type>;
 

@@ -272,7 +272,7 @@ impl VM for ExecutionWrangler {
     }
 
     fn state_root(&self) -> cid::Cid {
-        self.bench.borrow_mut().flush()
+        self.bench.borrow_mut().state_root()
     }
 
     fn set_actor(&self, key: &Address, state: ActorState) {

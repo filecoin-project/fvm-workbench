@@ -6,7 +6,7 @@ use fil_actors_runtime::{
     STORAGE_MARKET_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ID, STORAGE_POWER_ACTOR_ADDR,
     STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID, VERIFIED_REGISTRY_ACTOR_ID,
 };
-use fvm_shared::address::Address;
+use fvm_shared::address::{Address, BLS_PUB_LEN};
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::sector::StoragePower;
@@ -197,5 +197,8 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
         &faucet_state,
         spec.faucet_balance.clone(),
     )?;
+    // match builtin-actor's test expectation of a FAUCET_ACTOR as the first user-space actor
+    assert_eq!(faucet_id, TEST_FAUCET_ADDR.id().unwrap());
+
     Ok(GenesisResult { verifreg_signer_id, verifreg_root_id, faucet_id })
 }

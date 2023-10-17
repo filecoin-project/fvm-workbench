@@ -29,7 +29,25 @@ fn benchmark_builtin_actors() {
 #[test]
 fn problematic_test() {
     let w = &setup();
-    //    =============
-    aggregate_bad_sector_number_test(w);
-    // ============
+    // =============
+    change_beneficiary_success_test(w);
+    // =============
+}
+
+// do not commit: run the problematic test here to isolate it's failure
+#[test]
+fn problematic_test_2() {
+    let w = &setup();
+    // =============
+    placeholder_deploy_test(w);
+    // =============
+}
+
+// do not commit: run the problematic test here to isolate it's failure
+#[test]
+fn problematic_test_3() {
+    let w = &setup();
+    // =============
+    evm_eth_create_external_test(w);
+    // =============
 }

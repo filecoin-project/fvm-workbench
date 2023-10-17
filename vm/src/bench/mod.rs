@@ -3,10 +3,12 @@ use std::collections::BTreeMap;
 use anyhow::anyhow;
 
 use cid::Cid;
+use futures::stream::iter;
 use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
 use fvm::machine::{DefaultMachine, Machine};
+use fvm::state_tree::StateTree;
 use fvm::trace::ExecutionEvent;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::address::Address;
@@ -14,6 +16,7 @@ use fvm_shared::clock::ChainEpoch;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
+use fvm_workbench_api::blockstore::DynBlockstore;
 use fvm_workbench_api::trace::ExecutionEvent::{
     Call, CallError, CallReturn, GasCharge, InvokeActor,
 };
@@ -155,6 +158,11 @@ where
             map.insert(*code, vm_api::builtin::Type::System);
         }
 
+        let system = manifest.code_by_id(1);
+        if let Some(code) = system {
+            map.insert(*code, vm_api::builtin::Type::System);
+        }
+
         let init = manifest.code_by_id(2);
         if let Some(code) = init {
             map.insert(*code, vm_api::builtin::Type::Init);
@@ -258,6 +266,15 @@ where
             )
             .unwrap()
         });
+    }
+
+    fn state_root(&mut self) -> Cid {
+        let fvm_root_cid = self.flush();
+        // FIXME: this is a hack that may leave other parts of the state_tree unflushed
+        // in reality, the check state_invariants method should ask for the tree directly rather than a Cid to the tree
+        let mut tree =
+            StateTree::new_from_root(DynBlockstore::new(self.store()), &fvm_root_cid).unwrap();
+        tree.hamt.flush().unwrap()
     }
 }
 
