@@ -3,9 +3,9 @@ use fil_actors_integration_tests::TEST_FAUCET_ADDR;
 use fil_actors_runtime::runtime::builtins::Type;
 use fil_actors_runtime::{
     make_empty_map, BURNT_FUNDS_ACTOR_ADDR, BURNT_FUNDS_ACTOR_ID, CRON_ACTOR_ID,
-    DATACAP_TOKEN_ACTOR_ID, INIT_ACTOR_ID, REWARD_ACTOR_ID, STORAGE_MARKET_ACTOR_ADDR,
-    STORAGE_MARKET_ACTOR_ID, STORAGE_POWER_ACTOR_ADDR, STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID,
-    VERIFIED_REGISTRY_ACTOR_ID,
+    DATACAP_TOKEN_ACTOR_ID, EAM_ACTOR_ID, INIT_ACTOR_ID, REWARD_ACTOR_ID,
+    STORAGE_MARKET_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ID, STORAGE_POWER_ACTOR_ADDR,
+    STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID, VERIFIED_REGISTRY_ACTOR_ID,
 };
 use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
@@ -22,6 +22,7 @@ pub struct GenesisSpec {
     pub reward_balance: TokenAmount,
     pub faucet_balance: TokenAmount,
     pub verifreg_signer: Address,
+    pub faucet: Address,
 }
 
 impl GenesisSpec {
@@ -31,6 +32,8 @@ impl GenesisSpec {
             reward_balance: TokenAmount::from_whole(1_100_000_000),
             faucet_balance: TokenAmount::from_whole(900_000_000),
             verifreg_signer: Address::new_bls(&[200; fvm_shared::address::BLS_PUB_LEN]).unwrap(),
+            // Faucet is installed in user-actor address space and needs a BLS/SECP address
+            faucet: Address::new_bls(&[201; fvm_shared::address::BLS_PUB_LEN]).unwrap(),
         }
     }
 }
@@ -67,9 +70,7 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
     )?;
 
     // Init actor
-    let test_faucet_id = TEST_FAUCET_ADDR.id().unwrap();
-    let mut init_state = fil_actor_init::State::new(builder.store(), "workbench".to_string())?;
-    init_state.next_id = test_faucet_id + 1;
+    let init_state = fil_actor_init::State::new(builder.store(), "workbench".to_string())?;
     builder.create_singleton_actor(
         Type::Init as u32,
         INIT_ACTOR_ID,
@@ -171,6 +172,15 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
         TokenAmount::zero(),
     )?;
 
+    // EAM actor
+    let empty_state_array: &[u8; 0] = &[];
+    builder.create_singleton_actor(
+        Type::EAM as u32,
+        EAM_ACTOR_ID,
+        empty_state_array,
+        TokenAmount::zero(),
+    )?;
+
     // Burnt funds account
     let burnt_state = fil_actor_account::State { address: BURNT_FUNDS_ACTOR_ADDR };
     builder.create_singleton_actor(
@@ -181,12 +191,12 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
     )?;
 
     // Faucet account
-    let faucet_state = fil_actor_account::State { address: Address::new_id(test_faucet_id) };
-    builder.create_singleton_actor(
+    let faucet_state = fil_actor_account::State { address: spec.faucet };
+    let faucet_id = builder.create_builtin_actor(
         Type::Account as u32,
-        test_faucet_id,
+        &spec.faucet,
         &faucet_state,
         spec.faucet_balance.clone(),
     )?;
-    Ok(GenesisResult { verifreg_signer_id, verifreg_root_id, faucet_id: test_faucet_id })
+    Ok(GenesisResult { verifreg_signer_id, verifreg_root_id, faucet_id })
 }
