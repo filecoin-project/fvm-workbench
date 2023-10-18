@@ -148,6 +148,11 @@ where
         let manifest = self.executor.builtin_actors();
         let mut map = BTreeMap::new();
 
+        let system = manifest.code_by_id(1);
+        if let Some(code) = system {
+            map.insert(*code, vm_api::builtin::Type::System);
+        }
+
         let init = manifest.code_by_id(2);
         if let Some(code) = init {
             map.insert(*code, vm_api::builtin::Type::Init);
@@ -195,12 +200,32 @@ where
 
         let verifreg = manifest.code_by_id(11);
         if let Some(code) = verifreg {
-            map.insert(*code, vm_api::builtin::Type::Reward);
+            map.insert(*code, vm_api::builtin::Type::VerifiedRegistry);
         }
 
         let datacap = manifest.code_by_id(12);
         if let Some(code) = datacap {
             map.insert(*code, vm_api::builtin::Type::DataCap);
+        }
+
+        let placeholder = manifest.code_by_id(13);
+        if let Some(code) = placeholder {
+            map.insert(*code, vm_api::builtin::Type::Placeholder);
+        }
+
+        let evm = manifest.code_by_id(14);
+        if let Some(code) = evm {
+            map.insert(*code, vm_api::builtin::Type::EVM);
+        }
+
+        let eam = manifest.code_by_id(15);
+        if let Some(code) = eam {
+            map.insert(*code, vm_api::builtin::Type::EAM);
+        }
+
+        let ethaccount = manifest.code_by_id(16);
+        if let Some(code) = ethaccount {
+            map.insert(*code, vm_api::builtin::Type::EthAccount);
         }
 
         map
