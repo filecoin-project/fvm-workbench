@@ -1,5 +1,4 @@
 use cid::Cid;
-use fil_actors_integration_tests::TEST_FAUCET_ADDR;
 use fil_actors_runtime::runtime::builtins::Type;
 use fil_actors_runtime::{
     make_empty_map, BURNT_FUNDS_ACTOR_ADDR, BURNT_FUNDS_ACTOR_ID, CRON_ACTOR_ID,

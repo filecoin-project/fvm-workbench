@@ -25,6 +25,7 @@ pub fn setup() -> ExecutionWrangler {
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
     // check that the genesis state matches assumptions in the builtin-actors test code
     assert_eq!(genesis.faucet_id, TEST_FAUCET_ADDR.id().unwrap());
-    let bench = builder.build().unwrap();
+    let circulating_supply = spec.reward_balance + spec.faucet_balance;
+    let bench = builder.build(circulating_supply).unwrap();
     ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}))
 }

@@ -185,7 +185,7 @@ where
 
     /// Creates a workbench with the current state tree.
     /// The System and Init actors must be created before the workbench can be built or used.
-    fn build(&mut self) -> anyhow::Result<Box<dyn Bench>> {
+    fn build(&mut self, circulating_supply: TokenAmount) -> anyhow::Result<Box<dyn Bench>> {
         // Clone the context so the builder can be re-used for a new bench.
         let mut machine_ctx = self.machine_ctx.clone();
 
@@ -202,7 +202,9 @@ where
         let executor = DefaultExecutor::<
             BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>,
         >::new(EnginePool::new_default(engine_conf)?, machine)?;
-        Ok(Box::new(FvmBench::new(executor)))
+        let mut bench = FvmBench::new(executor);
+        bench.set_circulating_supply(circulating_supply);
+        Ok(Box::new(bench))
     }
 }
 
