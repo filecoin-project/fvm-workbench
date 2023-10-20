@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use anyhow::anyhow;
 
 use cid::Cid;
-use futures::stream::iter;
 use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
@@ -268,13 +267,26 @@ where
         });
     }
 
-    fn state_root(&mut self) -> Cid {
+    fn actor_states(&mut self) -> BTreeMap<Address, ActorState> {
         let fvm_root_cid = self.flush();
-        // FIXME: this is a hack that may leave other parts of the state_tree unflushed
-        // in reality, the check state_invariants method should ask for the tree directly rather than a Cid to the tree
-        let mut tree =
+        let tree =
             StateTree::new_from_root(DynBlockstore::new(self.store()), &fvm_root_cid).unwrap();
-        tree.hamt.flush().unwrap()
+        let mut actor_states = BTreeMap::new();
+        tree.for_each(|key, state| {
+            actor_states.insert(
+                key,
+                ActorState {
+                    code: state.code,
+                    state: state.state,
+                    sequence: state.sequence,
+                    balance: state.balance.clone(),
+                    delegated_address: state.delegated_address,
+                },
+            );
+            Ok(())
+        })
+        .unwrap();
+        actor_states
     }
 }
 

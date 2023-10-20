@@ -1,4 +1,5 @@
 use cid::Cid;
+use fil_actors_integration_tests::TEST_FAUCET_ADDR;
 use fil_actors_runtime::runtime::builtins::Type;
 use fil_actors_runtime::{
     make_empty_map, BURNT_FUNDS_ACTOR_ADDR, BURNT_FUNDS_ACTOR_ID, CRON_ACTOR_ID,
@@ -6,7 +7,7 @@ use fil_actors_runtime::{
     STORAGE_MARKET_ACTOR_ADDR, STORAGE_MARKET_ACTOR_ID, STORAGE_POWER_ACTOR_ADDR,
     STORAGE_POWER_ACTOR_ID, SYSTEM_ACTOR_ID, VERIFIED_REGISTRY_ACTOR_ID,
 };
-use fvm_shared::address::{Address, BLS_PUB_LEN};
+use fvm_shared::address::Address;
 use fvm_shared::bigint::Zero;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::sector::StoragePower;

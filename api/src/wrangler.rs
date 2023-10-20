@@ -271,8 +271,8 @@ impl VM for ExecutionWrangler {
         self.bench.borrow().builtin_actors_manifest()
     }
 
-    fn state_root(&self) -> cid::Cid {
-        self.bench.borrow_mut().state_root()
+    fn actor_states(&self) -> BTreeMap<Address, ActorState> {
+        self.bench.borrow_mut().actor_states()
     }
 
     fn set_actor(&self, key: &Address, state: ActorState) {
