@@ -4,7 +4,7 @@ use fvm::gas::{Gas, GasTimer, PriceList};
 use fvm::kernel::{
     ActorOps, BlockId, BlockRegistry, BlockStat, CircSupplyOps, CryptoOps, DebugOps, EventOps,
     ExecutionError, GasOps, IpldBlockOps, LimiterOps, MessageOps, NetworkOps, RandomnessOps,
-    SelfOps, SendResult,
+    SelfOps, SendResult, SyscallError,
 };
 
 use fvm::{DefaultKernel, Kernel};
@@ -249,8 +249,9 @@ where
         let charge = self.inner_kernel.price_list().on_verify_signature(sig_type, signature.len());
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
         if signature != plaintext {
-            return Err(ExecutionError::Fatal(anyhow::format_err!(
-                "invalid signature (mock sig validation expects siggy bytes to be equal to plaintext)"
+            return Err(ExecutionError::Syscall(SyscallError::new(
+                fvm_shared::error::ErrorNumber::IllegalArgument,
+                "invalid signature (mock sig validation expects siggy bytes to be equal to plaintext)",
             )));
         }
         Ok(true)
