@@ -90,4 +90,7 @@ pub trait Bench {
 
     /// Set the current circulating supply
     fn set_circulating_supply(&mut self, amount: TokenAmount);
+
+    /// Get a map of all address -> actor mappings in the state tree
+    fn actor_states(&self) -> BTreeMap<Address, ActorState>;
 }
