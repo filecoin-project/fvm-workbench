@@ -80,6 +80,7 @@ impl TraceAnalysis {
                         closed_span.add_self_to_total_gas();
                     }
                 }
+                ExecutionEvent::InvokeActor { .. } => {}
             }
         }
         // Close the root span.

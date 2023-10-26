@@ -14,7 +14,9 @@ use fvm_shared::clock::ChainEpoch;
 use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::ActorID;
-use fvm_workbench_api::trace::ExecutionEvent::{Call, CallError, CallReturn, GasCharge};
+use fvm_workbench_api::trace::ExecutionEvent::{
+    Call, CallError, CallReturn, GasCharge, InvokeActor,
+};
 use fvm_workbench_api::trace::ExecutionTrace;
 use fvm_workbench_api::{bench::Bench, ExecutionResult};
 use vm_api::ActorState;
@@ -257,6 +259,27 @@ where
             .unwrap()
         });
     }
+
+    fn actor_states(&self) -> BTreeMap<Address, ActorState> {
+        let mut tree = BTreeMap::new();
+        self.executor
+            .state_tree()
+            .for_each(|address, actor| {
+                tree.insert(
+                    address,
+                    ActorState {
+                        code: actor.code,
+                        state: actor.state,
+                        sequence: actor.sequence,
+                        balance: actor.balance.clone(),
+                        delegated_address: actor.delegated_address,
+                    },
+                );
+                Ok(())
+            })
+            .unwrap();
+        tree
+    }
 }
 
 // Converts an FVM-internal application result to an API execution result.
@@ -283,13 +306,14 @@ fn trace_as_trace(fvm_trace: fvm::trace::ExecutionTrace) -> ExecutionTrace {
                 compute_milli: e.compute_gas.as_milligas(),
                 other_milli: e.other_gas.as_milligas(),
             }),
-            ExecutionEvent::Call { from, to, method, params, value } => {
-                events.push(Call { from, to, method, params, value })
+            ExecutionEvent::Call { from, to, method, params, value, gas_limit, read_only } => {
+                events.push(Call { from, to, method, params, value, gas_limit, read_only })
             }
             ExecutionEvent::CallReturn(exit_code, return_value) => {
                 events.push(CallReturn { exit_code, return_value })
             }
             ExecutionEvent::CallError(e) => events.push(CallError { reason: e.0, errno: e.1 }),
+            ExecutionEvent::InvokeActor(cid) => events.push(InvokeActor { cid }),
             _ => todo!(),
         }
     }

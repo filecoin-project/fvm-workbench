@@ -275,13 +275,6 @@ where
     }
 
     // NOT forwarded - verification always succeeds
-    fn verify_seal(&self, vi: &SealVerifyInfo) -> ExecutionResult<bool> {
-        let charge = self.inner_kernel.price_list().on_verify_seal(vi);
-        let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
-        Ok(true)
-    }
-
-    // NOT forwarded - verification always succeeds
     fn verify_post(&self, vi: &WindowPoStVerifyInfo) -> ExecutionResult<bool> {
         let charge = self.inner_kernel.price_list().on_verify_post(vi);
         let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
@@ -394,22 +387,17 @@ where
     // TODO: perhaps should be implemented via faking externs https://github.com/anorth/fvm-workbench/issues/10
     fn get_randomness_from_tickets(
         &self,
-        _personalization: i64,
-        _rand_epoch: ChainEpoch,
-        entropy: &[u8],
+        rand_epoch: ChainEpoch,
     ) -> ExecutionResult<[u8; RANDOMNESS_LENGTH]> {
-        let charge = self.inner_kernel.price_list().on_get_randomness(entropy.len());
-        let _ = self.inner_kernel.charge_gas(&charge.name, charge.total())?;
+        self.inner_kernel.get_randomness_from_tickets(rand_epoch)?;
         Ok(TEST_VM_RAND_ARRAY)
     }
 
     fn get_randomness_from_beacon(
         &self,
-        personalization: i64,
         rand_epoch: ChainEpoch,
-        entropy: &[u8],
     ) -> ExecutionResult<[u8; RANDOMNESS_LENGTH]> {
-        self.inner_kernel.get_randomness_from_beacon(personalization, rand_epoch, entropy)
+        self.inner_kernel.get_randomness_from_beacon(rand_epoch)
     }
 }
 
@@ -418,7 +406,7 @@ impl<C> SelfOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn root(&self) -> ExecutionResult<Cid> {
+    fn root(&mut self) -> ExecutionResult<Cid> {
         self.inner_kernel.root()
     }
 
@@ -430,8 +418,8 @@ where
         self.inner_kernel.current_balance()
     }
 
-    fn self_destruct(&mut self, beneficiary: &Address) -> ExecutionResult<()> {
-        self.inner_kernel.self_destruct(beneficiary)
+    fn self_destruct(&mut self, burn_unspent: bool) -> ExecutionResult<()> {
+        self.inner_kernel.self_destruct(burn_unspent)
     }
 }
 
@@ -440,8 +428,13 @@ impl<C> EventOps for BenchKernel<C>
 where
     C: CallManager,
 {
-    fn emit_event(&mut self, raw_evt: &[u8]) -> ExecutionResult<()> {
-        self.inner_kernel.emit_event(raw_evt)
+    fn emit_event(
+        &mut self,
+        event_headers: &[fvm_shared::sys::EventEntry],
+        raw_key: &[u8],
+        raw_val: &[u8],
+    ) -> fvm::kernel::Result<()> {
+        self.inner_kernel.emit_event(event_headers, raw_key, raw_val)
     }
 }
 

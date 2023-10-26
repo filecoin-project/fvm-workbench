@@ -16,7 +16,7 @@ pub fn setup() -> ExecutionWrangler {
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         store.clone(),
         FakeExterns::new(),
-        NetworkVersion::V18,
+        NetworkVersion::V21,
         StateTreeVersion::V5,
         fil_builtin_actors_bundle::BUNDLE_CAR,
     )
