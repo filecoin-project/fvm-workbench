@@ -41,6 +41,8 @@ pub struct GenesisResult {
     pub verifreg_signer_id: ActorID,
     pub verifreg_root_id: ActorID,
     pub faucet_id: ActorID,
+    pub circulating_supply: TokenAmount,
+    pub total_supply: TokenAmount,
 }
 
 impl GenesisResult {
@@ -197,5 +199,14 @@ pub fn create_genesis_actors<B: WorkbenchBuilder>(
         &faucet_state,
         spec.faucet_balance.clone(),
     )?;
-    Ok(GenesisResult { verifreg_signer_id, verifreg_root_id, faucet_id })
+
+    let total_supply = &spec.faucet_balance + &spec.reward_balance;
+
+    Ok(GenesisResult {
+        verifreg_signer_id,
+        verifreg_root_id,
+        faucet_id,
+        circulating_supply: spec.faucet_balance.clone(),
+        total_supply,
+    })
 }

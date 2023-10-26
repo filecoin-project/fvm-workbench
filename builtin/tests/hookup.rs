@@ -1,3 +1,5 @@
+use fil_actors_integration_tests::util::assert_invariants;
+use fil_actors_runtime::runtime::Policy;
 use fil_actors_runtime::INIT_ACTOR_ADDR;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_shared::bigint::Zero;
@@ -31,19 +33,13 @@ fn test_hookup() {
 
     let spec = GenesisSpec::default(manifest_data_cid);
     let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
-    let circulating_supply = spec.reward_balance + spec.faucet_balance;
-    let bench = builder.build(circulating_supply).unwrap();
+    let faucet_addr = genesis.faucet_address();
+    let bench = builder.build(genesis.circulating_supply).unwrap();
     let wrangler =
         ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}));
 
     let result = wrangler
-        .execute_message(
-            &genesis.faucet_address(),
-            &INIT_ACTOR_ADDR,
-            &TokenAmount::zero(),
-            METHOD_SEND,
-            None,
-        )
+        .execute_message(&faucet_addr, &INIT_ACTOR_ADDR, &TokenAmount::zero(), METHOD_SEND, None)
         .unwrap();
 
     assert_eq!(ExitCode::OK, result.code);
@@ -52,4 +48,7 @@ fn test_hookup() {
     println!("{}", trace.format());
     let analysis = TraceAnalysis::build(trace.clone());
     println!("{}", analysis.format_spans());
+
+    // check that the genesis state obeys state-invariants
+    assert_invariants(&wrangler, &Policy::default(), Some(genesis.total_supply));
 }
