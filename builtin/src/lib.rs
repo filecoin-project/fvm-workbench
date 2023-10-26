@@ -1,3 +1,4 @@
+use fil_actors_integration_tests::TEST_FAUCET_ADDR;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_shared::{state::StateTreeVersion, version::NetworkVersion};
 use fvm_workbench_api::{bench::WorkbenchBuilder, wrangler::ExecutionWrangler};
@@ -21,7 +22,10 @@ pub fn setup() -> ExecutionWrangler {
     )
     .unwrap();
     let spec = GenesisSpec::default(manifest_data_cid);
-    let _genesis = create_genesis_actors(&mut builder, &spec).unwrap();
-    let bench = builder.build().unwrap();
+    let genesis = create_genesis_actors(&mut builder, &spec).unwrap();
+    // check that the genesis state matches assumptions in the builtin-actors test code
+    assert_eq!(genesis.faucet_id, TEST_FAUCET_ADDR.id().unwrap());
+    let circulating_supply = spec.reward_balance + spec.faucet_balance;
+    let bench = builder.build(circulating_supply).unwrap();
     ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}))
 }

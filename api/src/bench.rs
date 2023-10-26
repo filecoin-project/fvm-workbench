@@ -42,7 +42,7 @@ pub trait WorkbenchBuilder {
 
     /// Creates a workbench ready to execute messages.
     /// The System and Init actors must be created before a workbench can be built or used.
-    fn build(&mut self) -> anyhow::Result<Box<dyn Bench>>;
+    fn build(&mut self, circulating_supply: TokenAmount) -> anyhow::Result<Box<dyn Bench>>;
 }
 
 /// A VM workbench that can execute messages to actors.
