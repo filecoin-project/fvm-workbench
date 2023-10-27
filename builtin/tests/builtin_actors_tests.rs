@@ -23,8 +23,16 @@ fn account_authenticate_message() {
 }
 
 #[test]
+fn eth_test() {
+    let w = setup();
+    placeholder_deploy_test(&w);
+}
+
+#[test]
 fn test_registry() {
     let registry = TEST_REGISTRY.lock().unwrap();
+    println!("Discovered {} tests", registry.len());
+
     for (name, (speed, test)) in registry.iter() {
         println!("{}: ({})", name, speed);
         if speed < &1 {
