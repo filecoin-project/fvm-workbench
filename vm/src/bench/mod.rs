@@ -6,7 +6,7 @@ use cid::Cid;
 use fvm::call_manager::DefaultCallManager;
 use fvm::engine::EnginePool;
 use fvm::executor::{ApplyKind, ApplyRet, DefaultExecutor, Executor};
-use fvm::machine::{DefaultMachine, Machine};
+use fvm::machine::{DefaultMachine, Machine, MachineContext};
 use fvm::trace::ExecutionEvent;
 use fvm_ipld_blockstore::Blockstore;
 use fvm_shared::address::Address;
@@ -45,6 +45,43 @@ where
     pub fn new(executor: BenchExecutor<B>) -> Self {
         Self { executor }
     }
+
+    fn modify_machine_ctx<F>(&mut self, modify_ctx: F)
+    where
+        F: Fn(&mut MachineContext),
+    {
+        // TODO: there is currently no way to get the externs out of the machine.
+        // Machine::externs(&self) does exist but since the above line machine.into_store() takes ownership of the
+        // machine we cannot borrow it again.
+        //
+        // Alternatives here that would allow us to keep the generic flexibility over externs
+        //
+        // - add a function to Machine to allow a single function that takes ownership and returns a tuple of blockstore, externs
+        // - add a function to Machine that allows explicit mutation of the MachineContext. Though this seems like a bit of an anti-pattern. My understanding is that the Machine shouldn't really mutate but rather new machines should be instantiated per epoch. But maybe this is ok.
+        // - have FakeExterns implement Clone and then clone the externs out of the machine before taking ownership of the machine
+        // - have FakeExterns be an indirection to user-provided functionality
+        replace_with::replace_with_or_abort(&mut self.executor, |e| {
+            let mut machine = e.into_machine().unwrap();
+            let engine_conf = (&machine.context().network).into();
+            let mut machine_ctx = machine.context().clone();
+
+            modify_ctx(&mut machine_ctx); // Apply the specific modification
+
+            machine_ctx.initial_state_root = machine.flush().unwrap();
+            let machine = DefaultMachine::new(
+                &machine_ctx,
+                machine.into_store().into_inner(),
+                FakeExterns::new(),
+            )
+            .unwrap();
+
+            DefaultExecutor::<BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>::new(
+                EnginePool::new_default(engine_conf).unwrap(),
+                machine,
+            )
+            .unwrap()
+        });
+    }
 }
 
 impl<B> Bench for FvmBench<B>
@@ -62,11 +99,6 @@ where
     ) -> anyhow::Result<ExecutionResult> {
         self.executor.execute_message(msg, ApplyKind::Implicit, msg_length).map(ret_as_result)
     }
-
-    fn epoch(&self) -> ChainEpoch {
-        self.executor.context().epoch
-    }
-
     fn store(&self) -> &dyn Blockstore {
         self.executor.blockstore()
     }
@@ -108,40 +140,6 @@ where
             .lookup_id(addr)
             .map_err(|e| anyhow!("failed to resolve address {}: {}", addr, e.to_string()))
     }
-
-    fn set_epoch(&mut self, epoch: ChainEpoch) {
-        replace_with::replace_with_or_abort(&mut self.executor, |e| {
-            let mut machine = e.into_machine().unwrap();
-            let engine_conf = (&machine.context().network).into();
-            let mut machine_ctx = machine.context().clone();
-            machine_ctx.epoch = epoch;
-            machine_ctx.initial_state_root = machine.flush().unwrap();
-
-            // TODO: there is currently no way to get the externs out of the machine.
-            // Machine::externs(&self) does exist but since the above line machine.into_store() takes ownership of the
-            // machine we cannot borrow it again.
-            //
-            // Alternatives here that would allow us to keep the generic flexibility over externs
-            //
-            // - add a function to Machine to allow a single function that takes ownership and returns a tuple of blockstore, externs
-            // - add a function to Machine that allows explicit mutation of the MachineContext. Though this seems like a bit of an anti-pattern. My understanding is that the Machine shouldn't really mutate but rather new machines should be instantiated per epoch. But maybe this is ok.
-            // - have FakeExterns implement Clone and then clone the externs out of the machine before taking ownership of the machine
-            // - have FakeExterns be an indirection to user-provided functionality
-            let machine = DefaultMachine::new(
-                &machine_ctx,
-                machine.into_store().into_inner(),
-                FakeExterns::new(),
-            )
-            .unwrap();
-
-            DefaultExecutor::<BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>::new(
-                EnginePool::new_default(engine_conf).unwrap(),
-                machine,
-            )
-            .unwrap()
-        });
-    }
-
     fn flush(&mut self) -> Cid {
         self.executor.flush().unwrap()
     }
@@ -233,33 +231,6 @@ where
         map
     }
 
-    fn circulating_supply(&self) -> TokenAmount {
-        self.executor.context().circ_supply.clone()
-    }
-
-    fn set_circulating_supply(&mut self, amount: TokenAmount) {
-        replace_with::replace_with_or_abort(&mut self.executor, |e| {
-            let mut machine = e.into_machine().unwrap();
-            let engine_conf = (&machine.context().network).into();
-            let mut machine_ctx = machine.context().clone();
-            machine_ctx.circ_supply = amount;
-            machine_ctx.initial_state_root = machine.flush().unwrap();
-
-            let machine = DefaultMachine::new(
-                &machine_ctx,
-                machine.into_store().into_inner(),
-                FakeExterns::new(),
-            )
-            .unwrap();
-
-            DefaultExecutor::<BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>>::new(
-                EnginePool::new_default(engine_conf).unwrap(),
-                machine,
-            )
-            .unwrap()
-        });
-    }
-
     fn actor_states(&self) -> BTreeMap<Address, ActorState> {
         let mut tree = BTreeMap::new();
         self.executor
@@ -279,6 +250,62 @@ where
             })
             .unwrap();
         tree
+    }
+
+    fn epoch(&self) -> ChainEpoch {
+        self.executor.context().epoch
+    }
+
+    fn set_epoch(&mut self, epoch: ChainEpoch) {
+        self.modify_machine_ctx(|ctx| {
+            ctx.epoch = epoch;
+        });
+    }
+
+    fn circulating_supply(&self) -> TokenAmount {
+        self.executor.context().circ_supply.clone()
+    }
+
+    fn set_circulating_supply(&mut self, amount: TokenAmount) {
+        self.modify_machine_ctx(|ctx| {
+            ctx.circ_supply = amount.clone();
+        });
+    }
+
+    fn base_fee(&self) -> TokenAmount {
+        self.executor.context().base_fee.clone()
+    }
+
+    fn set_base_fee(&mut self, amount: TokenAmount) {
+        self.modify_machine_ctx(|ctx| {
+            ctx.base_fee = amount.clone();
+        });
+    }
+
+    fn timestamp(&self) -> u64 {
+        self.executor.context().timestamp
+    }
+
+    fn set_timestamp(&mut self, timestamp: u64) {
+        self.modify_machine_ctx(|ctx| {
+            ctx.timestamp = timestamp;
+        });
+    }
+
+    fn initial_state_root(&self) -> Cid {
+        self.executor.context().initial_state_root
+    }
+
+    fn set_initial_state_root(&mut self, state_root: Cid) {
+        self.modify_machine_ctx(|ctx| {
+            ctx.initial_state_root = state_root;
+        });
+    }
+
+    fn set_tracing(&mut self, tracing: bool) {
+        self.modify_machine_ctx(|ctx| {
+            ctx.tracing = tracing;
+        });
     }
 }
 

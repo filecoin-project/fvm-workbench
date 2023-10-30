@@ -192,6 +192,7 @@ where
         // Flush the state tree to store and calculate the initial root.
         let state_root = self.state_tree.flush().map_err(anyhow::Error::from)?;
         machine_ctx.initial_state_root = state_root;
+        machine_ctx.circ_supply = circulating_supply;
 
         let engine_conf = (&machine_ctx.network).into();
         let machine = DefaultMachine::new(
@@ -202,8 +203,7 @@ where
         let executor = DefaultExecutor::<
             BenchKernel<DefaultCallManager<DefaultMachine<B, FakeExterns>>>,
         >::new(EnginePool::new_default(engine_conf)?, machine)?;
-        let mut bench = FvmBench::new(executor);
-        bench.set_circulating_supply(circulating_supply);
+        let bench = FvmBench::new(executor);
         Ok(Box::new(bench))
     }
 }
