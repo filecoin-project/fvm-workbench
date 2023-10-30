@@ -1,5 +1,7 @@
 use fil_actors_integration_tests::TEST_FAUCET_ADDR;
+use fil_actors_runtime::runtime::EMPTY_ARR_CID;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
+use fvm_ipld_encoding::CborStore;
 use fvm_shared::{state::StateTreeVersion, version::NetworkVersion};
 use fvm_workbench_api::{bench::WorkbenchBuilder, wrangler::ExecutionWrangler};
 use fvm_workbench_vm::{
@@ -26,5 +28,7 @@ pub fn setup() -> ExecutionWrangler {
     // check that the genesis state matches assumptions in the builtin-actors test code
     assert_eq!(genesis.faucet_id, TEST_FAUCET_ADDR.id().unwrap());
     let bench = builder.build(genesis.circulating_supply).unwrap();
+    let cid = store.put_cbor::<[u8; 0]>(&[], cid::multihash::Code::Blake2b256).unwrap();
+    assert_eq!(cid, EMPTY_ARR_CID);
     ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}))
 }

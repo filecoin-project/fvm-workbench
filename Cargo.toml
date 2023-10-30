@@ -73,13 +73,13 @@ fil_builtin_actors_bundle = { version = "12.0.0", git = "https://github.com/file
 # fvm_sdk = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
 
 ## Patches for local development
-# fvm = { path = "../../filecoin-project/ref-fvm/fvm" }
-# fvm_ipld_hamt = { path = "../../filecoin-project/ref-fvm/ipld/hamt"}
-# fvm_ipld_amt = { path = "../../filecoin-project/ref-fvm/ipld/amt"}
-# fvm_ipld_blockstore = { path = "../../filecoin-project/ref-fvm/ipld/blockstore" }
-# fvm_ipld_encoding = { path = "../../filecoin-project/ref-fvm/ipld/encoding" }
-# fvm_shared = { path = "../../filecoin-project/ref-fvm/shared" }
-# fvm_sdk = { path = "../../filecoin-project/ref-fvm/sdk" }
+fvm = { path = "../../filecoin-project/ref-fvm/fvm" }
+fvm_ipld_hamt = { path = "../../filecoin-project/ref-fvm/ipld/hamt"}
+fvm_ipld_amt = { path = "../../filecoin-project/ref-fvm/ipld/amt"}
+fvm_ipld_blockstore = { path = "../../filecoin-project/ref-fvm/ipld/blockstore" }
+fvm_ipld_encoding = { path = "../../filecoin-project/ref-fvm/ipld/encoding" }
+fvm_shared = { path = "../../filecoin-project/ref-fvm/shared" }
+fvm_sdk = { path = "../../filecoin-project/ref-fvm/sdk" }
 
 [patch.'https://github.com/filecoin-project/builtin-actors']
 ## Patches to profile/benchmark local changes to actor code.
