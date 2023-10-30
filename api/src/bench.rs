@@ -13,7 +13,6 @@ use crate::{ActorState, ExecutionResult};
 
 /// A factory for workbench instances.
 /// Built-in actors must be installed before the workbench can be created.
-// TODO: Configuration of default circulating supply, base fee etc.
 pub trait WorkbenchBuilder {
     type B: Blockstore;
 
@@ -57,12 +56,6 @@ pub trait Bench {
         msg_length: usize,
     ) -> anyhow::Result<ExecutionResult>;
 
-    /// Returns the VM's current epoch.
-    fn epoch(&self) -> ChainEpoch;
-
-    /// Replaces the VM in the workbench with a new set to the specified epoch
-    fn set_epoch(&mut self, epoch: ChainEpoch);
-
     /// Returns a reference to the VM's blockstore.
     fn store(&self) -> &dyn Blockstore;
 
@@ -85,12 +78,39 @@ pub trait Bench {
     /// Get a manifest of the builtin actors
     fn builtin_actors_manifest(&self) -> BTreeMap<Cid, vm_api::builtin::Type>;
 
+    /// Get a map of all address -> actor mappings in the state tree
+    fn actor_states(&self) -> BTreeMap<Address, ActorState>;
+
+    /// Get the VM's current epoch
+    fn epoch(&self) -> ChainEpoch;
+
+    /// Set the VM's current epoch
+    fn set_epoch(&mut self, epoch: ChainEpoch);
+
     /// Get the current circulating supply
     fn circulating_supply(&self) -> TokenAmount;
 
     /// Set the current circulating supply
     fn set_circulating_supply(&mut self, amount: TokenAmount);
 
-    /// Get a map of all address -> actor mappings in the state tree
-    fn actor_states(&self) -> BTreeMap<Address, ActorState>;
+    /// Get the current base fee
+    fn base_fee(&self) -> TokenAmount;
+
+    /// Set the current base fee
+    fn set_base_fee(&mut self, amount: TokenAmount);
+
+    /// Get the current timestamp
+    fn timestamp(&self) -> u64;
+
+    /// Set the current timestamp
+    fn set_timestamp(&mut self, timestamp: u64);
+
+    /// Get the initial state root of the block
+    fn initial_state_root(&self) -> Cid;
+
+    /// Set the initial state root of the block
+    fn set_initial_state_root(&mut self, state_root: Cid);
+
+    /// Toggle execution traces in the VM (default: true in the workbench)
+    fn set_tracing(&mut self, tracing: bool);
 }
