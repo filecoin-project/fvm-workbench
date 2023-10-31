@@ -1,16 +1,16 @@
 use fil_actors_integration_tests::TEST_FAUCET_ADDR;
+use fil_actors_runtime::test_utils::FakePrimitives;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_shared::{state::StateTreeVersion, version::NetworkVersion};
 use fvm_workbench_api::{bench::WorkbenchBuilder, wrangler::ExecutionWrangler};
 use fvm_workbench_vm::{builder::FvmBenchBuilder, externs::FakeExterns};
 use genesis::{create_genesis_actors, GenesisSpec};
-use vm_api::MockPrimitives;
 
 pub mod genesis;
 
 /// Create an ExecutionWrangler with sensible genesis state and defaults for running imported
 /// tests from builtin-actors
-pub fn setup(primitives: Box<dyn MockPrimitives>) -> ExecutionWrangler {
+pub fn setup() -> ExecutionWrangler {
     let store = SharedMemoryBlockstore::new();
     let (mut builder, manifest_data_cid) = FvmBenchBuilder::new_with_bundle(
         store.clone(),
@@ -25,5 +25,5 @@ pub fn setup(primitives: Box<dyn MockPrimitives>) -> ExecutionWrangler {
     // check that the genesis state matches assumptions in the builtin-actors test code
     assert_eq!(genesis.faucet_id, TEST_FAUCET_ADDR.id().unwrap());
     let bench = builder.build(genesis.circulating_supply).unwrap();
-    ExecutionWrangler::new_default(bench, Box::new(store), primitives)
+    ExecutionWrangler::new_default(bench, Box::new(store), Box::<FakePrimitives>::default())
 }
