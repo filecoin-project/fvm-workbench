@@ -201,8 +201,13 @@ impl VM for ExecutionWrangler {
         self.store.as_ref()
     }
 
-    fn epoch(&self) -> ChainEpoch {
-        self.bench.borrow().epoch()
+    fn actor(&self, address: &Address) -> Option<ActorState> {
+        let id = self.bench.borrow().resolve_address(address).ok()??;
+        self.bench.borrow().find_actor(id).ok()?
+    }
+
+    fn set_actor(&self, key: &Address, state: ActorState) {
+        self.bench.borrow_mut().set_actor(key, state)
     }
 
     fn balance(&self, address: &Address) -> TokenAmount {
@@ -241,41 +246,52 @@ impl VM for ExecutionWrangler {
         self.execute(params, from, to, method, value, true)
     }
 
-    fn set_epoch(&self, epoch: ChainEpoch) {
-        self.bench.borrow_mut().set_epoch(epoch)
-    }
-
     /// Note: this is derived from the underlying ExecutionTraces, so it will clear those when taken
     fn take_invocations(&self) -> Vec<InvocationTrace> {
         self.execution_results.take().into_iter().map(InvocationTrace::from).collect()
-    }
-
-    fn actor(&self, address: &Address) -> Option<ActorState> {
-        let id = self.bench.borrow().resolve_address(address).ok()??;
-        self.bench.borrow().find_actor(id).ok()?
     }
 
     fn primitives(&self) -> &dyn Primitives {
         self.primitives.as_ref()
     }
 
-    fn set_circulating_supply(&self, supply: TokenAmount) {
-        self.bench.borrow_mut().set_circulating_supply(supply);
+    fn actor_manifest(&self) -> BTreeMap<Cid, vm_api::builtin::Type> {
+        self.bench.borrow().builtin_actors_manifest()
+    }
+
+    fn actor_states(&self) -> BTreeMap<Address, ActorState> {
+        self.bench.borrow().actor_states()
+    }
+
+    fn epoch(&self) -> ChainEpoch {
+        self.bench.borrow().epoch()
+    }
+
+    fn set_epoch(&self, epoch: ChainEpoch) {
+        self.bench.borrow_mut().set_epoch(epoch)
     }
 
     fn circulating_supply(&self) -> TokenAmount {
         self.bench.borrow().circulating_supply().clone()
     }
 
-    fn actor_manifest(&self) -> BTreeMap<Cid, vm_api::builtin::Type> {
-        self.bench.borrow().builtin_actors_manifest()
+    fn set_circulating_supply(&self, supply: TokenAmount) {
+        self.bench.borrow_mut().set_circulating_supply(supply);
     }
 
-    fn set_actor(&self, key: &Address, state: ActorState) {
-        self.bench.borrow_mut().set_actor(key, state)
+    fn base_fee(&self) -> TokenAmount {
+        self.bench.borrow().base_fee()
     }
 
-    fn actor_states(&self) -> BTreeMap<Address, ActorState> {
-        self.bench.borrow().actor_states()
+    fn set_base_fee(&self, amount: TokenAmount) {
+        self.bench.borrow_mut().set_base_fee(amount)
+    }
+
+    fn timestamp(&self) -> u64 {
+        self.bench.borrow().timestamp()
+    }
+
+    fn set_timestamp(&self, timestamp: u64) {
+        self.bench.borrow_mut().set_timestamp(timestamp)
     }
 }
