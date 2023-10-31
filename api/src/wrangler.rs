@@ -14,14 +14,14 @@ use fvm_shared::econ::TokenAmount;
 use fvm_shared::message::Message;
 use fvm_shared::{ActorID, MethodNum, BLOCK_GAS_LIMIT};
 use vm_api::trace::InvocationTrace;
-use vm_api::{vm_err, ActorState, MessageResult, Primitives, VMError, VM};
+use vm_api::{vm_err, ActorState, MessageResult, MockPrimitives, Primitives, VMError, VM};
 
 pub use crate::{bench::Bench, trace::ExecutionTrace, ExecutionResult};
 
 pub struct ExecutionWrangler {
     bench: RefCell<Box<dyn Bench>>,
     store: Box<dyn Blockstore>,
-    primitives: Box<dyn Primitives>,
+    primitives: Box<dyn MockPrimitives>,
     version: u64,
     gas_limit: u64,
     gas_fee_cap: TokenAmount,
@@ -39,7 +39,7 @@ impl ExecutionWrangler {
     pub fn new(
         bench: Box<dyn Bench>,
         store: Box<dyn Blockstore>,
-        primitives: Box<dyn Primitives>,
+        primitives: Box<dyn MockPrimitives>,
         version: u64,
         gas_limit: u64,
         gas_fee_cap: TokenAmount,
@@ -66,7 +66,7 @@ impl ExecutionWrangler {
     pub fn new_default(
         bench: Box<dyn Bench>,
         store: Box<dyn Blockstore>,
-        primitives: Box<dyn Primitives>,
+        primitives: Box<dyn MockPrimitives>,
     ) -> Self {
         Self::new(
             bench,
@@ -252,7 +252,7 @@ impl VM for ExecutionWrangler {
     }
 
     fn primitives(&self) -> &dyn Primitives {
-        self.primitives.as_ref()
+        self.mut_primitives().as_primitives()
     }
 
     fn actor_manifest(&self) -> BTreeMap<Cid, vm_api::builtin::Type> {
@@ -293,5 +293,9 @@ impl VM for ExecutionWrangler {
 
     fn set_timestamp(&self, timestamp: u64) {
         self.bench.borrow_mut().set_timestamp(timestamp)
+    }
+
+    fn mut_primitives(&self) -> &dyn MockPrimitives {
+        &*self.primitives
     }
 }

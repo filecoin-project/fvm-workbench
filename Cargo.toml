@@ -28,25 +28,25 @@ fvm_ipld_encoding = { version = "0.4.0" }
 fvm_ipld_hamt = { version = "0.8.0" }
 
 # builtin-actors
-fil_builtin_actors_bundle = { package="fil_builtin_actors_bundle", version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897" }
-fil_builtin_actors_state = { version = "1.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897" }
-fil_actor_account = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_cron = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_datacap = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_init = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_market = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_miner = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_multisig = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_paych = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_power = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_reward = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_system = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actor_verifreg = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
-fil_actors_runtime = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897", features = [] }
+fil_builtin_actors_bundle = { package="fil_builtin_actors_bundle", version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be" }
+fil_builtin_actors_state = { version = "1.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be" }
+fil_actor_account = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_cron = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_datacap = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_init = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_market = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_miner = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_multisig = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_paych = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_power = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_reward = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_system = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actor_verifreg = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
+fil_actors_runtime = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be", features = [] }
 
 # integration-tests
-vm_api = { version = "1.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897" }
-fil_actors_integration_tests = { version = "1.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897" }
+vm_api = { version = "1.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be" }
+fil_actors_integration_tests = { version = "1.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be" }
 
 # common
 anyhow = { version = "~1.0.47" }
@@ -62,7 +62,7 @@ replace_with = "0.1.7"
 
 [patch.crates-io]
 # even though the dep is specified as a git repo in dependencies, cargo tries to pick from crates.io without this patch
-fil_builtin_actors_bundle = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "a63124541e0ca777623044db014422cec43c3897" }
+fil_builtin_actors_bundle = { version = "12.0.0", git = "https://github.com/filecoin-project/builtin-actors", rev = "17222b98457397131284872fe5c20a370480d6be" }
 
 # fvm = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
 # fvm_ipld_hamt = {git="https://github.com/helix-onchain/ref-fvm", branch="alexytsu/update-builtins"}
@@ -83,19 +83,19 @@ fil_builtin_actors_bundle = { version = "12.0.0", git = "https://github.com/file
 
 [patch.'https://github.com/filecoin-project/builtin-actors']
 ## Patches to profile/benchmark local changes to actor code.
-# fil_builtin_actors_bundle = { path = "../../filecoin-project/builtin-actors" }
-# fil_actor_account = { path = "../../filecoin-project/builtin-actors/actors/account" }
-# fil_actor_cron = { path = "../../filecoin-project/builtin-actors/actors/cron" }
-# fil_actor_datacap = { path = "../../filecoin-project/builtin-actors/actors/datacap" }
-# fil_actor_init = { path = "../../filecoin-project/builtin-actors/actors/init" }
-# fil_actor_market = { path = "../../filecoin-project/builtin-actors/actors/market" }
-# fil_actor_miner = { path = "../../filecoin-project/builtin-actors/actors/miner" }
-# fil_actor_multisig = { path = "../../filecoin-project/builtin-actors/actors/multisig" }
-# fil_actor_paych = { path = "../../filecoin-project/builtin-actors/actors/paych" }
-# fil_actor_power = { path = "../../filecoin-project/builtin-actors/actors/power" }
-# fil_actor_reward = { path = "../../filecoin-project/builtin-actors/actors/reward" }
-# fil_actor_system = { path = "../../filecoin-project/builtin-actors/actors/system" }
-# fil_actor_verifreg = { path = "../../filecoin-project/builtin-actors/actors/verifreg" }
-# fil_actors_runtime = { path = "../../filecoin-project/builtin-actors/runtime" }
-# vm_api = { path = "../../filecoin-project/builtin-actors/vm_api" }
-# fil_actors_integration_tests = { path = "../../filecoin-project/builtin-actors/integration_tests" }
+fil_builtin_actors_bundle = { path = "../../filecoin-project/builtin-actors" }
+fil_actor_account = { path = "../../filecoin-project/builtin-actors/actors/account" }
+fil_actor_cron = { path = "../../filecoin-project/builtin-actors/actors/cron" }
+fil_actor_datacap = { path = "../../filecoin-project/builtin-actors/actors/datacap" }
+fil_actor_init = { path = "../../filecoin-project/builtin-actors/actors/init" }
+fil_actor_market = { path = "../../filecoin-project/builtin-actors/actors/market" }
+fil_actor_miner = { path = "../../filecoin-project/builtin-actors/actors/miner" }
+fil_actor_multisig = { path = "../../filecoin-project/builtin-actors/actors/multisig" }
+fil_actor_paych = { path = "../../filecoin-project/builtin-actors/actors/paych" }
+fil_actor_power = { path = "../../filecoin-project/builtin-actors/actors/power" }
+fil_actor_reward = { path = "../../filecoin-project/builtin-actors/actors/reward" }
+fil_actor_system = { path = "../../filecoin-project/builtin-actors/actors/system" }
+fil_actor_verifreg = { path = "../../filecoin-project/builtin-actors/actors/verifreg" }
+fil_actors_runtime = { path = "../../filecoin-project/builtin-actors/runtime" }
+vm_api = { path = "../../filecoin-project/builtin-actors/vm_api" }
+fil_actors_integration_tests = { path = "../../filecoin-project/builtin-actors/integration_tests" }
