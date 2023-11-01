@@ -1,5 +1,6 @@
 use fil_actors_integration_tests::util::assert_invariants;
 use fil_actors_runtime::runtime::Policy;
+use fil_actors_runtime::test_utils::FakePrimitives;
 use fil_actors_runtime::INIT_ACTOR_ADDR;
 use fvm_actor_utils::shared_blockstore::SharedMemoryBlockstore;
 use fvm_shared::bigint::Zero;
@@ -16,7 +17,6 @@ use fvm_workbench_builtin_actors::genesis::{
 };
 use fvm_workbench_vm::builder::FvmBenchBuilder;
 use fvm_workbench_vm::externs::FakeExterns;
-use fvm_workbench_vm::primitives::FakePrimitives;
 use vm_api::VM;
 
 #[test]
@@ -36,7 +36,7 @@ fn test_hookup() {
     let faucet_addr = genesis.faucet_address();
     let bench = builder.build(genesis.circulating_supply).unwrap();
     let wrangler =
-        ExecutionWrangler::new_default(bench, Box::new(store), Box::new(FakePrimitives {}));
+        ExecutionWrangler::new_default(bench, Box::new(store), Box::<FakePrimitives>::default());
 
     let result = wrangler
         .execute_message(&faucet_addr, &INIT_ACTOR_ADDR, &TokenAmount::zero(), METHOD_SEND, None)
